@@ -196,7 +196,7 @@ def FordFulkersonMaximumFlow(
   2. Найти на пути минимальное ребро (у нас всегда 1)
   3. Вычесть в остаточной сети из веса каждого ребра на найденном пути вес минимального.
   4. Добавить к пути на графе потока величину минимального ребра.
-   */
+  */
 
   val falseEdges = graph.edges.toOuter.map {
     // фиктивные рёбра
@@ -216,9 +216,6 @@ def FordFulkersonMaximumFlow(
       s ~> d % 0
     }
   )
-
-  // def e(graph:Graph[Int, WDiEdge[Int]])(s:Int, d:Int):WDiEdge[Int] =
-  //   graph get s ~> d %
 
   // Остаточная сеть
   // Вес ребра = C(uv) - f(uv), начальная в точности равна C(uv)
@@ -277,4 +274,17 @@ def FordFulkersonMaximumFlow(
   
   // Итоговый вариант остаточной сети.
   val finalRisidualNet = risidualNetSequence(risidualNet).last
-  ???
+
+  // Способ доставать рёбра за амортизированную O(1)
+  val edgeMap = finalRisidualNet.edges.toOuter
+    .map(edge=>(edge.source, edge.target)->edge.weight).toMap
+    .withDefault((_,_)=>0.0)
+
+  // Итоговый граф потока
+  val finalFlowGraph = Graph.from(
+    throughputGraph.nodes.toOuter,
+    throughputGraph.edges.toOuter.map{
+      case s:~>d % w => s~>d % (w - edgeMap((s,d)))
+    }
+  )
+  finalFlowGraph
