@@ -23,6 +23,8 @@ lazy val root = project
     libraryDependencies ++= Seq(
       "org.scalameta" %% "munit" % "1.0.0" % Test,
       "org.scala-graph" %% "graph-core" % "2.0.2",
+      "org.scala-graph" %% "graph-dot" % "2.0.0",
+      "org.scala-lang" %% "toolkit" % "0.7.0",
       "com.typesafe.akka" %% "akka-actor-typed" % akkaVersion,
       "ch.qos.logback" % "logback-classic" % "1.2.13",
       "com.typesafe.akka" %% "akka-actor-testkit-typed" % akkaVersion % Test,
