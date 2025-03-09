@@ -18,7 +18,10 @@ import com.example.Trivials.StringFilter.filter
 import scalax.collection.edges.UnDiEdge
 import scalax.collection.AnyGraph
 
-/** @param graph
+/**
+  * Класс для представления тестируемой системы.
+  *  
+  * @param graph
   *   3-partie graph with Signals, videoshots and workstations
   * @param signals
   *   set of signals
@@ -52,9 +55,7 @@ case class SystemModel(
 def printCollection[X](title:String, coll:Iterable[X]):String = 
   s"$title:\n\t${coll.mkString("\n\t")}\n"
 object SystemModel
-// def unapply(sm:SystemModel):Option[
-//   (Graph[Int, WDiEdge[Int]],Seq[Int],Seq[Int],Seq[Int],Map[Int, Int])] =
-//     Some((sm._1,sm._2,sm._3,sm._4,sm._5))
+
 
 // Id ~ Int, последовательный
 object IdGen:
@@ -75,19 +76,18 @@ object IdGen:
   *   lower and higher edges for workstation display number. Random number, flat
   *   distribution.
   */
-
 def generateSystemModel(
     signals: Int,
-    videoShots: Int,
+    videoshots: Int,
     workstations: Int,
     signal2Shots: Int,
-    shots2WorkStations: Int,
+    shot2Workstations: Int,
     displayLimits: (Int, Int)
 ): SystemModel =
 
   // Nodes
   val signalNodes = (1 to signals).map(_ => IdGen())
-  val videoNodes = (1 to videoShots).map(_ => IdGen())
+  val videoNodes = (1 to videoshots).map(_ => IdGen())
   val workstationNodes = (1 to workstations).map(_ => IdGen())
 
   // Случайные количества дисплеев.
@@ -104,7 +104,7 @@ def generateSystemModel(
 
   val vwEdges = for {
     v <- videoNodes
-    w <- pick(shots2WorkStations, workstationNodes.length).map(workstationNodes)
+    w <- pick(shot2Workstations, workstationNodes.length).map(workstationNodes)
   } yield v ~> w % 1
 
   // Собирвем граф
@@ -161,7 +161,7 @@ object Sequential extends TestingAlgorithmProducer:
       system
     // будем передавать граф неявно
     given Graph[Int, WDiEdge[Int]] = graph
-    // собираем итератор. Если код падает здесь, у нас с кикими-то видеокадрами не связаны АРМы.
+    // собираем итератор.
     signals.toIterator
       .flatMap(s => n(s).diSuccessors.map(v => s -> v))
       .map { (s, v) => (s, v, n(v).diSuccessors.head) }
@@ -474,12 +474,13 @@ def writeGraphToGraphML(
   </graph>
 </graphml>"""
     val composed = prolog + nodes.mkString("\n") +"\n"+ edges.mkString("\n") + epilog
-    val file = os.Path("/tmp/" + fileName + ".graphml")
+    
+    val file = os.temp.dir() / (fileName + ".graphml")
     os.write.over(file, composed)
-    //println(composed)
+    println(s"graph saved to ${file}")
 
   
-
+// todo :
 def isolationGraph(signals:Seq[Int], systemGraph:Graph[Int, WDiEdge[Int]]):Graph[Int, UnDiEdge[Int]] = 
   for{
     s1 <- signals
@@ -491,7 +492,14 @@ def isolationGraph(signals:Seq[Int], systemGraph:Graph[Int, WDiEdge[Int]]):Graph
   ???
 
 def fulcersonTest() = 
-  val systemModel:SystemModel = generateSystemModel(3, 6, 5, 4, 3, (3,5))
+  val systemModel:SystemModel = generateSystemModel(
+    signals = 10000, 
+    videoshots = 1000, 
+    workstations = 20, 
+    signal2Shots = 10, 
+    shot2Workstations = 5, 
+    displayLimits = (3,5)
+    )
   writeGraphToGraphML(
     systemModel.graph, 
     "a",
@@ -505,4 +513,9 @@ object SystemGraphOps{
   
 }
 
-@main def mmain() = fulcersonTest()
+@main def mmain() = 
+  //fulcersonTest()
+  
+  val file = os.read(os.Path("""C:\Users\Diemy\AppData\Local\Temp\7862956825990604953\a.graphml"""))
+  println(file.split("\n").length)
+
