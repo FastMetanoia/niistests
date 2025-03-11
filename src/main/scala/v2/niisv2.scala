@@ -17,10 +17,13 @@ import com.example.Trivials.FunctorFunctor.map
 import com.example.Trivials.StringFilter.filter
 import scalax.collection.edges.UnDiEdge
 import scalax.collection.AnyGraph
+import scala.concurrent.ExecutionContext
+import scala.concurrent.Future
+import scala.concurrent.Await
+import scala.concurrent.duration.Duration
 
-/**
-  * Класс для представления тестируемой системы.
-  *  
+/** Класс для представления тестируемой системы.
+  *
   * @param graph
   *   3-partie graph with Signals, videoshots and workstations
   * @param signals
@@ -39,23 +42,23 @@ case class SystemModel(
     workstations: Seq[Int],
     workstationDisplays: Map[Int, Int]
 ):
-  override def toString(): String = 
+  override def toString(): String =
     given Graph[Int, WDiEdge[Int]] = graph
-    def printNodesSuccessors(setName:String, nodeSet:Seq[Int]):String = 
-      printCollection(setName, 
-        nodeSet.map{s=>
-          s"$s-> " + n(s).diSuccessors.map(_.outer).mkString("(",", ",")")
-          }
+    def printNodesSuccessors(setName: String, nodeSet: Seq[Int]): String =
+      printCollection(
+        setName,
+        nodeSet.map { s =>
+          s"$s-> " + n(s).diSuccessors.map(_.outer).mkString("(", ", ", ")")
+        }
       )
     val signalsPrint = signals
-    printNodesSuccessors("Signals", signals) + 
-    printNodesSuccessors("Videoshots", videoshots) +
-    printNodesSuccessors("Workstations", workstations) + 
-    printCollection("Workstation Displays", workstationDisplays)
-def printCollection[X](title:String, coll:Iterable[X]):String = 
+    printNodesSuccessors("Signals", signals) +
+      printNodesSuccessors("Videoshots", videoshots) +
+      printNodesSuccessors("Workstations", workstations) +
+      printCollection("Workstation Displays", workstationDisplays)
+def printCollection[X](title: String, coll: Iterable[X]): String =
   s"$title:\n\t${coll.mkString("\n\t")}\n"
 object SystemModel
-
 
 // Id ~ Int, последовательный
 object IdGen:
@@ -216,7 +219,7 @@ def FordFulkersonMaximumFlow(
   2. Найти на пути минимальное ребро (у нас всегда 1)
   3. Вычесть в остаточной сети из веса каждого ребра на найденном пути вес минимального.
   4. Добавить к пути на графе потока величину минимального ребра.
-  */
+   */
 
   val falseEdges = graph.edges.toOuter.map {
     // фиктивные рёбра
@@ -258,7 +261,7 @@ def FordFulkersonMaximumFlow(
 
     path match
       // Если путь не найден - поток максимален.
-      case None       => LazyList.empty
+      case None => LazyList.empty
       // Если путь найден
       case Some(path) =>
         // Наименьший вес на пути
@@ -279,82 +282,95 @@ def FordFulkersonMaximumFlow(
         // Новая остаточная сеть. Заменяем пути из старой сети на новые.
         val updatedRisidualNet = Graph.from(
           positiveRisidualNet.nodes.toOuter,
-          //Убираем все рёбра по пути
+          // Убираем все рёбра по пути
           positiveRisidualNet.edges.toOuter.filter(edge =>
             adjustedPath
-              .find(e =>
-                e.source == edge.source && e.target == edge.target
-              )
+              .find(e => e.source == edge.source && e.target == edge.target)
               .isEmpty
           )
-            // Добавляем все рёбра по пути
+          // Добавляем все рёбра по пути
             ++ adjustedPath
         )
         updatedRisidualNet #:: risidualNetSequence(updatedRisidualNet)
-  
+
   // Итоговый вариант остаточной сети.
   val finalRisidualNet = risidualNetSequence(risidualNet).last
 
   // Способ доставать рёбра за амортизированную O(1)
   val edgeMap = finalRisidualNet.edges.toOuter
-    .map(edge=>(edge.source, edge.target)->edge.weight).toMap
-    .withDefault((_,_)=>0.0)
+    .map(edge => (edge.source, edge.target) -> edge.weight)
+    .toMap
+    .withDefault((_, _) => 0.0)
 
   // Итоговый граф потока
   val finalFlowGraph = Graph.from(
     throughputGraph.nodes.toOuter,
-    throughputGraph.edges.toOuter.map{
-      case s:~>d % w => s~>d % (w - edgeMap((s,d)))
+    throughputGraph.edges.toOuter.map { case s :~> d % w =>
+      s ~> d % (w - edgeMap((s, d)))
     }
   )
   finalFlowGraph
 end FordFulkersonMaximumFlow
+
 def addSink(
-  graph:Graph[Int, WDiEdge[Int]], 
-  workstations:Seq[Int], 
-  workstationDisplays:Map[Int,Int]
-  ):(Graph[Int, WDiEdge[Int]], Int) =
-    val sink = IdGen()
-    val sinkEdges = workstations.map(w=> w ~> sink % workstationDisplays(w))
-    (Graph.from(graph.nodes.toOuter + sink, graph.edges.toOuter ++ sinkEdges), sink)
-  
-def removeSourceAndSink(graph:Graph[Int, WDiEdge[Int]], source:Int, sink:Int):Graph[Int, WDiEdge[Int]] =
+    graph: Graph[Int, WDiEdge[Int]],
+    workstations: Seq[Int],
+    workstationDisplays: Map[Int, Int]
+): (Graph[Int, WDiEdge[Int]], Int) =
+  val sink = IdGen()
+  val sinkEdges = workstations.map(w => w ~> sink % workstationDisplays(w))
+  (
+    Graph.from(graph.nodes.toOuter + sink, graph.edges.toOuter ++ sinkEdges),
+    sink
+  )
+
+def removeSourceAndSink(
+    graph: Graph[Int, WDiEdge[Int]],
+    source: Int,
+    sink: Int
+): Graph[Int, WDiEdge[Int]] =
   graph - source - sink
 
 def addSource(
-  signals:Seq[Int], 
-  graph:Graph[Int, WDiEdge[Int]]
-  ):(Graph[Int, WDiEdge[Int]], Int) = 
-    given Graph[Int, WDiEdge[Int]] = graph
-    val source = IdGen()
-    val sourceEdges = signals.map(s => source ~> s % n(s).diSuccessors.size)
-    (Graph.from(graph.nodes.toOuter + source, graph.edges.toOuter ++ sourceEdges), source)
+    signals: Seq[Int],
+    graph: Graph[Int, WDiEdge[Int]]
+): (Graph[Int, WDiEdge[Int]], Int) =
+  given Graph[Int, WDiEdge[Int]] = graph
+  val source = IdGen()
+  val sourceEdges = signals.map(s => source ~> s % n(s).diSuccessors.size)
+  (
+    Graph.from(
+      graph.nodes.toOuter + source,
+      graph.edges.toOuter ++ sourceEdges
+    ),
+    source
+  )
 
 // fallback for case when unable to process all signal-videoshot combinations with 1 action
 // returns the result graph, newly created workstations and mapping
 def duplicateWorkstations(
-  g:Graph[Int, WDiEdge[Int]], 
-  ws:Seq[Int], 
-  wsMap:Map[Int, Int]
-  ):(Graph[Int, WDiEdge[Int]], Seq[Int], Map[Int,Int]) = 
+    g: Graph[Int, WDiEdge[Int]],
+    ws: Seq[Int],
+    wsMap: Map[Int, Int]
+): (Graph[Int, WDiEdge[Int]], Seq[Int], Map[Int, Int]) =
   // oldId->newId->displaysNumber
-  val oldNewMapping = wsMap.map{ (k,v)=>k->(IdGen()->v) }
+  val oldNewMapping = wsMap.map { (k, v) => k -> (IdGen() -> v) }
 
-  val newEdges = oldNewMapping.flatMap{ elem=>
+  val newEdges = oldNewMapping.flatMap { elem =>
     val (oldId, (newId, displaysNumber)) = elem
-    (g get oldId).diPredecessors.map(_.outer).map{ pred=> 
-        // todo: 0 or 1? 
-        pred ~> newId % 0
-      }
+    (g get oldId).diPredecessors.map(_.outer).map { pred =>
+      // todo: 0 or 1?
+      pred ~> newId % 0
     }
-  
-  val newMapping = oldNewMapping.map{ elem=>
+  }
+
+  val newMapping = oldNewMapping.map { elem =>
     val (oldId, (newId, displaysNumber)) = elem
-    newId->displaysNumber
+    newId -> displaysNumber
   }
 
   val newWorkstations = newMapping.keySet
-  
+
   val newGraph =
     Graph.from(
       g.nodes.toOuter ++ newWorkstations,
@@ -363,89 +379,104 @@ def duplicateWorkstations(
   (newGraph, newWorkstations.toSeq, newMapping)
 end duplicateWorkstations
 
-    /**
-      * @param signals              signals to process simulataniously
-      * @param graph                graph to work with
-      * @param workstations         workstation nodes
-      * @param workstationDisplays  workstation to display number mapping
-      * @return                     LazyList of actions
-      */
+// sutturation check
+def isSutturated(
+    flowGraph: Graph[Int, WDiEdge[Int]],
+    signals: Seq[Int],
+    sutturationMapping: Map[Int, Int]
+): Boolean =
+  sutturationMapping.forall { (signalId, successorsNumber) =>
+    (flowGraph get signalId).edges
+      .map(_.outer)
+      .filter(_.source == signalId)
+      .map(_.weight)
+      .sum == successorsNumber
+  }
+
+/** @param signals
+  *   signals to process simulataniously
+  * @param graph
+  *   graph to work with
+  * @param workstations
+  *   workstation nodes
+  * @param workstationDisplays
+  *   workstation to display number mapping
+  * @return
+  *   LazyList of actions
+  */
 def processSignals(
-  signals:Seq[Int], 
-  graph:Graph[Int, WDiEdge[Int]], 
-  workstations:Seq[Int], 
-  workstationDisplays:Map[Int, Int]):Seq[Action] = 
+    signals: Seq[Int],
+    graph: Graph[Int, WDiEdge[Int]],
+    workstations: Seq[Int],
+    workstationDisplays: Map[Int, Int]
+): Seq[Action] =
 
-    // number of connections for each signal
-    val signalsSutturation = signals.map(s=> s->(graph get s).diSuccessors.size).toMap
+  // number of connections for each signal
+  val signalsSutturation =
+    signals.map(s => s -> (graph get s).diSuccessors.size).toMap
 
-    // sutturationCheck
-    def isSutturated(
-      flowGraph:Graph[Int, WDiEdge[Int]],
-      signals:Seq[Int], 
-      sutturationMapping:Map[Int,Int]
-    ):Boolean =
-      sutturationMapping.forall{ (signalId, successorsNumber)=>
-        (flowGraph get signalId).edges
-          .map(_.outer)
-          .filter(_.source == signalId)
-          .map(_.weight)
-          .sum == successorsNumber
-      }
-    
-    def go( 
-      sigs:Seq[Int], 
-      g:Graph[Int, WDiEdge[Int]], 
-      ws:Seq[Seq[Int]], 
-      wsDisplays:Seq[Map[Int, Int]]
-    ):LazyList[(Graph[Int, WDiEdge[Int]], Seq[Seq[Int]])] = 
-      val (g1, source) = addSource(sigs, g)
-      val (g2, sink) = addSink(g1, ws.flatten, wsDisplays.flatten.toMap)
-      val maxFlowGraph = removeSourceAndSink(FordFulkersonMaximumFlow(g2, source, sink), source, sink)
-      // All edges are sutturated than we have a final flow version
-      if(isSutturated(maxFlowGraph, sigs, signalsSutturation))
-        LazyList((maxFlowGraph, ws))
-      else 
-        // if not, we duplicate the workstations and recalculate the flow
-        val (newG, newWs, newWsMapping) = duplicateWorkstations(g, workstations, workstationDisplays)
-        (maxFlowGraph, ws) #:: go(
-          sigs,
-          newG,
-          ws.appended(newWs),
-          wsDisplays.appended(newWsMapping)
-        )
-
-    //   полный поток и коответствующее количество копий рабочих станций
-    val (completeFlow, workstationBunches) = go(signals, graph, Seq(workstations), Seq(workstationDisplays)).last
-    
-    // рёбра отсортированные в по шагам
-    val actionsEdges = workstationBunches.map{ _.flatMap{ worstation=>
-      (completeFlow get worstation)
-        .edges.map(_.outer)
-        .filter(e=> e.target == worstation && e.weight > 0)
-      }}
-
-    // итог: действия
-    val actions = actionsEdges.map{ edges => 
-      Action(
-        signals.toSet,
-        edges.map(e=> e.source->e.target).toMap
+  def go(
+      sigs: Seq[Int],
+      g: Graph[Int, WDiEdge[Int]],
+      ws: Seq[Seq[Int]],
+      wsDisplays: Seq[Map[Int, Int]]
+  ): LazyList[(Graph[Int, WDiEdge[Int]], Seq[Seq[Int]])] =
+    val (g1, source) = addSource(sigs, g)
+    val (g2, sink) = addSink(g1, ws.flatten, wsDisplays.flatten.toMap)
+    val maxFlowGraph = removeSourceAndSink(
+      FordFulkersonMaximumFlow(g2, source, sink),
+      source,
+      sink
+    )
+    // All edges are sutturated than we have a final flow version
+    if (isSutturated(maxFlowGraph, sigs, signalsSutturation))
+      LazyList((maxFlowGraph, ws))
+    else
+      // if not, we duplicate the workstations and recalculate the flow
+      val (newG, newWs, newWsMapping) =
+        duplicateWorkstations(g, workstations, workstationDisplays)
+      (maxFlowGraph, ws) #:: go(
+        sigs,
+        newG,
+        ws.appended(newWs),
+        wsDisplays.appended(newWsMapping)
       )
+
+  //   полный поток и коответствующее количество копий рабочих станций
+  val (completeFlow, workstationBunches) =
+    go(signals, graph, Seq(workstations), Seq(workstationDisplays)).last
+
+  // рёбра отсортированные в по шагам
+  val actionsEdges = workstationBunches.map {
+    _.flatMap { worstation =>
+      (completeFlow get worstation).edges
+        .map(_.outer)
+        .filter(e => e.target == worstation && e.weight > 0)
     }
-    actions
+  }
+
+  // итог: действия
+  val actions = actionsEdges.map { edges =>
+    Action(
+      signals.toSet,
+      edges.map(e => e.source -> e.target).toMap
+    )
+  }
+  actions
 end processSignals
 
-// def writeGraphToDotFile[N,E](graph:Graph[N,E], fileName:String):Unit = 
+// def writeGraphToDotFile[N,E](graph:Graph[N,E], fileName:String):Unit =
 //   import scalax.collection.io.dot.*
 //   ???
 
 def writeGraphToGraphML(
-  graph:Graph[Int, WDiEdge[Int]], 
-  fileName:String, 
-  signals:Set[Int], 
-  videoshots:Set[Int], 
-  workstations:Set[Int]):Unit = 
-    val prolog = """<?xml version="1.0" encoding="UTF-8"?>
+    graph: Graph[Int, WDiEdge[Int]],
+    fileName: String,
+    signals: Set[Int],
+    videoshots: Set[Int],
+    workstations: Set[Int]
+): Unit =
+  val prolog = """<?xml version="1.0" encoding="UTF-8"?>
 <graphml xmlns="http://graphml.graphdrawing.org/xmlns"  
     xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
     xsi:schemaLocation="http://graphml.graphdrawing.org/xmlns
@@ -457,32 +488,35 @@ def writeGraphToGraphML(
   <key id="d1" for="edge" attr.name="weight" attr.type="double"/>
     """
 
-    val nodes = graph.nodes.toOuter.map{n=>
-      val color = n match
-        case x:Int if(signals.contains(x)) => "red"
-        case x:Int if(videoshots.contains(x)) => "green"
-        case x:Int if(workstations.contains(x)) => "blue"
-        case _ => "black"
-      s"\t\t<node id=\"n$n\">\n" +"\t\t\t<data key=\"d0\">" + color + "</data>\n"+ "\t\t</node>"
-    }
+  val nodes = graph.nodes.toOuter.map { n =>
+    val color = n match
+      case x: Int if (signals.contains(x))      => "red"
+      case x: Int if (videoshots.contains(x))   => "green"
+      case x: Int if (workstations.contains(x)) => "blue"
+      case _                                    => "black"
+    s"\t\t<node id=\"n$n\">\n" + "\t\t\t<data key=\"d0\">" + color + "</data>\n" + "\t\t</node>"
+  }
 
-    val edges = graph.edges.toOuter.zipWithIndex.map{(e, i)=>
-      s"\t\t<edge id=\"e$i\" source=\"n${e.source}\" target=\"n${e.target}\">\n" + 
+  val edges = graph.edges.toOuter.zipWithIndex.map { (e, i) =>
+    s"\t\t<edge id=\"e$i\" source=\"n${e.source}\" target=\"n${e.target}\">\n" +
       "\t\t\t<data key=\"d1\">" + e.weight.toDouble + "</data>\n" + "\t\t</edge>"
-    }
-    val epilog = """
+  }
+  val epilog = """
   </graph>
 </graphml>"""
-    val composed = prolog + nodes.mkString("\n") +"\n"+ edges.mkString("\n") + epilog
-    
-    val file = os.temp.dir() / (fileName + ".graphml")
-    os.write.over(file, composed)
-    println(s"graph saved to ${file}")
+  val composed =
+    prolog + nodes.mkString("\n") + "\n" + edges.mkString("\n") + epilog
 
-  
+  val file = os.temp.dir() / (fileName + ".graphml")
+  os.write.over(file, composed)
+  println(s"graph saved to ${file}")
+
 // todo :
-def isolationGraph(signals:Seq[Int], systemGraph:Graph[Int, WDiEdge[Int]]):Graph[Int, UnDiEdge[Int]] = 
-  for{
+def isolationGraph(
+    signals: Seq[Int],
+    systemGraph: Graph[Int, WDiEdge[Int]]
+): Graph[Int, UnDiEdge[Int]] =
+  for {
     s1 <- signals
     s2 <- signals
     if s1 != s2
@@ -491,31 +525,253 @@ def isolationGraph(signals:Seq[Int], systemGraph:Graph[Int, WDiEdge[Int]]):Graph
   } ???
   ???
 
-def fulcersonTest() = 
-  val systemModel:SystemModel = generateSystemModel(
-    signals = 10000, 
-    videoshots = 1000, 
-    workstations = 20, 
-    signal2Shots = 10, 
-    shot2Workstations = 5, 
-    displayLimits = (3,5)
-    )
+def fulcersonTest() =
+  val systemModel: SystemModel = generateSystemModel(
+    signals = 10000,
+    videoshots = 1000,
+    workstations = 20,
+    signal2Shots = 10,
+    shot2Workstations = 5,
+    displayLimits = (3, 5)
+  )
   writeGraphToGraphML(
-    systemModel.graph, 
+    systemModel.graph,
     "a",
-    systemModel.signals.toSet, 
-    systemModel.videoshots.toSet, 
-    systemModel.workstations.toSet)
-  
+    systemModel.signals.toSet,
+    systemModel.videoshots.toSet,
+    systemModel.workstations.toSet
+  )
 
+object SystemGraphOps {}
 
-object SystemGraphOps{
-  
-}
+@main def mmain() =
+  // fulcersonTest()
 
-@main def mmain() = 
-  //fulcersonTest()
-  
-  val file = os.read(os.Path("""C:\Users\Diemy\AppData\Local\Temp\7862956825990604953\a.graphml"""))
+  val file = os.read(
+    os.Path(
+      """C:\Users\Diemy\AppData\Local\Temp\7862956825990604953\a.graphml"""
+    )
+  )
   println(file.split("\n").length)
 
+// Абстрактный класс для решения проблемы.
+abstract class ProblemSolution[
+    DomainSystemModel,
+    DomainProblemPart,
+    CalculationModelInput,
+    CaclulcationModelOutput,
+    DomainSolutionPart,
+    DomainSolutionWhole
+] {
+  def decomposeProblem(
+      domainSystemModel: DomainSystemModel
+  ): Iterable[DomainProblemPart]
+  def transformToCalculationModel(
+      problemPart: DomainProblemPart
+  ): CalculationModelInput
+  def calculateModel(
+      caclucaltionInput: CalculationModelInput
+  ): CaclulcationModelOutput
+  def interpreteModel(
+      calculationResult: CaclulcationModelOutput
+  ): DomainSolutionPart
+  def agregateResults(
+      domainResults: Iterable[DomainSolutionPart]
+  ): DomainSolutionWhole
+
+  def solveProblem(domainSystemModel: DomainSystemModel): DomainSolutionWhole =
+    val calculatedSolutionParts = decomposeProblem(domainSystemModel)
+      .map(transformToCalculationModel)
+      .map(calculateModel)
+      .map(interpreteModel)
+    agregateResults(calculatedSolutionParts)
+
+  def solveProblemParallel(domainSystemModel: DomainSystemModel)(using
+      ExecutionContext
+  ): DomainSolutionWhole =
+    val resultParts = decomposeProblem(domainSystemModel).map(part =>
+      Future(
+        transformToCalculationModel
+          .andThen(calculateModel)
+          .andThen(interpreteModel)(part)
+      )
+    )
+    val futureResults = Future.sequence(resultParts).map(agregateResults)
+    Await.result(futureResults, Duration.Inf)
+}
+
+class SequentialTestingSolution(graph: Graph[Int, WDiEdge[Int]])
+    extends ProblemSolution[
+      SystemModel,
+      Int,
+      Int,
+      Set[(Int, Int, Int)],
+      Set[Action],
+      Seq[Action]
+    ] {
+
+  override def decomposeProblem(
+      domainSystemModel: SystemModel
+  ): Seq[Int] =
+    domainSystemModel.signals
+  override def transformToCalculationModel(
+      problemPart: Int
+  ): Int = problemPart
+
+  override def calculateModel(
+      caclucaltionInput: Int
+  ): Set[(Int, Int, Int)] =
+    val signal = caclucaltionInput
+    // Перебор всех пар сигнал-видеокадр c первой попавшейся рабочей станцией.
+    (graph get signal).diSuccessors
+      .map(v => signal -> v)
+      .map((s, v) => (s, v.outer, (graph get v).diSuccessors.head.outer))
+
+  override def interpreteModel(
+      calculationResult: Set[(Int, Int, Int)]
+  ): Set[Action] =
+    calculationResult.map { singleResult =>
+      // Распаковка значений
+      val (s, v, w) = singleResult
+      // Формирование действия тестирования
+      Action(signals = Set(s), Map(v -> w))
+    }
+
+  override def agregateResults(
+      domainResults: Iterable[Set[Action]]
+  ): Seq[Action] = domainResults.flatten.toSeq
+}
+
+case class PreparedGraph(
+    signals: Set[Int],
+    source: Int,
+    sink: Int,
+    graph: Graph[Int, WDiEdge[Int]],
+    workstations: Seq[Int],
+    workstationDisplays: Map[Int, Int]
+)
+case class ProcessedGraph(
+    signals: Set[Int],
+    graph: Graph[Int, WDiEdge[Int]],
+    workstationBunches: Seq[Seq[Int]]
+)
+
+object SimpleParallelTestingSolution
+    extends ProblemSolution[
+      SystemModel,
+      (Int, SystemModel),
+      PreparedGraph,
+      ProcessedGraph,
+      Seq[Action],
+      Iterable[Action]
+    ] {
+  override def decomposeProblem(
+      domainSystemModel: SystemModel
+  ): Seq[(Int, SystemModel)] =
+    domainSystemModel.signals.map(s => (s, domainSystemModel))
+
+  override def transformToCalculationModel(
+      problemPart: (Int, SystemModel)
+  ): PreparedGraph =
+    val (signal, model) = problemPart
+    val (g1, source) = addSource(Seq(signal), model.graph)
+    val (g2, sink) = addSink(g1, model.workstations, model.workstationDisplays)
+    PreparedGraph(
+      Set(signal),
+      source,
+      sink,
+      g2,
+      model.workstations,
+      model.workstationDisplays
+    )
+
+  override def calculateModel(
+      caclucaltionInput: PreparedGraph
+  ): ProcessedGraph =
+    // Распаковка даннных
+    val PreparedGraph(
+      signals,
+      source,
+      sink,
+      graph,
+      workstations,
+      workstationDisplays
+    ) = caclucaltionInput
+
+    // number of connections for each signal
+    val signalsSutturation =
+      signals.map(s => s -> (graph get s).diSuccessors.size).toMap
+
+    def go(
+        sigs: Seq[Int],
+        g: Graph[Int, WDiEdge[Int]],
+        ws: Seq[Seq[Int]],
+        wsDisplays: Seq[Map[Int, Int]]
+    ): LazyList[(Graph[Int, WDiEdge[Int]], Seq[Seq[Int]])] =
+      val (g1, source) = addSource(sigs, g)
+      val (g2, sink) = addSink(g1, ws.flatten, wsDisplays.flatten.toMap)
+      val maxFlowGraph = removeSourceAndSink(
+        FordFulkersonMaximumFlow(g2, source, sink),
+        source,
+        sink
+      )
+      // All edges are sutturated than we have a final flow version
+      if (isSutturated(maxFlowGraph, sigs, signalsSutturation))
+        LazyList((maxFlowGraph, ws))
+      else
+        // if not, we duplicate the workstations and recalculate the flow
+        val (newG, newWs, newWsMapping) =
+          duplicateWorkstations(g, workstations, workstationDisplays)
+        (maxFlowGraph, ws) #:: go(
+          sigs,
+          newG,
+          ws.appended(newWs),
+          wsDisplays.appended(newWsMapping)
+        )
+
+    //   полный поток и коответствующее количество копий рабочих станций
+    val (completeFlow, workstationBunches) =
+      go(signals.toSeq, graph, Seq(workstations), Seq(workstationDisplays)).last
+    ProcessedGraph(signals, completeFlow, workstationBunches)
+
+  override def interpreteModel(calculationResult: ProcessedGraph): Seq[Action] =
+    // Распаковка даннных
+    val ProcessedGraph(signals, completeFlow, workstationBunches) =
+      calculationResult
+
+    // рёбра отсортированные в по шагам
+    val actionsEdges = workstationBunches.map {
+      _.flatMap { worstation =>
+        (completeFlow get worstation).edges
+          .map(_.outer)
+          .filter(e => e.target == worstation && e.weight > 0)
+      }
+    }
+
+    // итог: действия
+    val actions = actionsEdges.map { edges =>
+      Action(
+        signals.toSet,
+        edges.map(e => e.source -> e.target).toMap
+      )
+    }
+    actions
+
+  override def agregateResults(
+      domainResults: Iterable[Seq[Action]]
+  ): Iterable[Action] = domainResults.flatten
+}
+
+// @main def testSps() =
+//   val systemModel: SystemModel = generateSystemModel(
+//     signals = 1000,
+//     videoshots = 1000,
+//     workstations = 20,
+//     signal2Shots = 10,
+//     shot2Workstations = 5,
+//     displayLimits = (3, 5)
+//   )
+//   val result = SequentialTestingSolution.solveProblem(systemModel)
+//   val path = os.temp.dir() / "sequentialTest.txt"
+//   os.write(path, result.mkString("\n"))
+//   println("saved to " + path)
