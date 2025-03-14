@@ -525,7 +525,7 @@ def isolationGraph(
   } ???
   ???
 
-def fulcersonTest() =
+def massTest() =
   val systemModel: SystemModel = generateSystemModel(
     signals = 10000,
     videoshots = 1000,
@@ -762,16 +762,61 @@ object SimpleParallelTestingSolution
   ): Iterable[Action] = domainResults.flatten
 }
 
-// @main def testSps() =
-//   val systemModel: SystemModel = generateSystemModel(
-//     signals = 1000,
-//     videoshots = 1000,
-//     workstations = 20,
-//     signal2Shots = 10,
-//     shot2Workstations = 5,
-//     displayLimits = (3, 5)
-//   )
-//   val result = SequentialTestingSolution.solveProblem(systemModel)
-//   val path = os.temp.dir() / "sequentialTest.txt"
-//   os.write(path, result.mkString("\n"))
-//   println("saved to " + path)
+@main def fulcersonTest() =
+
+  val signals = Seq(1)
+  val videoshots = Seq(2, 3, 4)
+  val workstations = Seq(5, 6, 7, 8)
+  val workstationDisplays = Map(
+    5->1,
+    6->1,
+    7->1,
+    8->1,
+  )
+
+  val edges1 = Seq(
+    1 -> 2,
+    1 -> 3,
+    1 -> 4,
+    2 -> 5,
+    2 -> 6,
+    3 -> 6,
+    3 -> 7,
+    4 -> 7,
+    4 -> 8
+  )
+
+  val edges2 = Seq(
+    1 -> 2,
+    1 -> 3,
+    1 -> 4,
+    2 -> 5,
+    2 -> 6,
+    3 -> 5,
+    4 -> 7,
+    4 -> 8
+  )
+
+  val g1 = Graph.from[Int, WDiEdge[Int]](
+    nodes = signals ++ videoshots ++ workstations,
+    edges = edges1.map { (s, t) => s ~> t % 1 }
+  )
+  val g2 = Graph.from[Int, WDiEdge[Int]](
+    nodes = signals ++ videoshots ++ workstations,
+    edges = edges2.map { (s, t) => s ~> t % 1 }
+  )
+
+  val m1 =
+    SystemModel(g1, signals, videoshots, workstations, workstationDisplays)
+  val m2 =
+    SystemModel(g2, signals, videoshots, workstations, workstationDisplays)
+
+  import scala.util.chaining.scalaUtilChainingOps
+  val scenrio1 = SimpleParallelTestingSolution.solveProblem(m1).tap(println)
+  val scenrio2 = SimpleParallelTestingSolution.solveProblem(m2).tap(println)
+
+  
+
+
+@main def testSps() =
+  massTest()
