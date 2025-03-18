@@ -1,6 +1,5 @@
 package v2
 
-import java.util.concurrent.atomic.AtomicLong
 import scalax.collection.immutable.Graph
 import scalax.collection.edges.labeled.WDiEdge
 import scalax.collection.edges.DiEdgeImplicits
@@ -12,19 +11,24 @@ import java.util.concurrent.atomic.AtomicInteger
 import scalax.collection.edges.labeled.:~>
 import scalax.collection.edges.labeled.%
 import scalax.collection.GraphOps
-import scala.collection.IndexedSeqView.Id
-import scalax.collection.edges.UnDiEdge
 import scalax.collection.AnyGraph
 import scala.concurrent.ExecutionContext
 import scala.concurrent.Future
 import scala.concurrent.Await
 import scala.concurrent.duration.Duration
 import v2.GlobalAuxiliaries.*
+import scala.concurrent.Promise
+import scala.util.Success
 
-// Id ~ Int, последовательный
 object GlobalAuxiliaries:
-  private val nextId = AtomicInteger(0)
-  def generateId() = nextId.incrementAndGet()
+  private val currentId:Promise[AtomicInteger] = Promise()
+
+  
+  def initializeIdGenerator(n:Int = 0):Unit = 
+    currentId.complete(Success(AtomicInteger(n)))
+
+  def generateId():Int = 
+    Await.result(currentId.future, Duration.Inf).incrementAndGet()
 
   /** @param signals
     *   number of signals
@@ -90,7 +94,7 @@ object GlobalAuxiliaries:
 
   def printCollection[X](title: String, coll: Iterable[X]): String =
     s"$title:\n\t${coll.mkString("\n\t")}\n"
-  
+
   /** @param n
     *   количество выбираемых чисел
     * @param rangeLimit
@@ -123,7 +127,14 @@ object GlobalAuxiliaries:
       Graph.from(graph.nodes.toOuter + sink, graph.edges.toOuter ++ sinkEdges),
       sink
     )
-
+  def addSourceAndSink(
+    graph:Graph[Int, WDiEdge[Int]], 
+    signals:Seq[Int], 
+    workstations:Seq[Int], 
+    workstationDisplays:Map[Int, Int] ):(Int,Int,Graph[Int, WDiEdge[Int]]) = 
+      val (g1, source) = addSource(signals, graph)
+      val (g2, sink) = addSink(g1, workstations, workstationDisplays)
+      (source, sink, g2)
   def removeSourceAndSink(
       graph: Graph[Int, WDiEdge[Int]],
       source: Int,
@@ -187,3 +198,17 @@ object GlobalAuxiliaries:
     val file = os.temp.dir() / (fileName + ".graphml")
     os.write.over(file, composed)
     println(s"graph saved to ${file}")
+
+  def showNodesSuccessors(
+      setName: String,
+      graph: Graph[Int, WDiEdge[Int]],
+      nodeSet: Seq[Int]
+  ): String =
+    printCollection(
+      setName,
+      nodeSet.map { s =>
+        s"$s-> " + (graph get s).diSuccessors
+          .map(_.outer)
+          .mkString("(", ", ", ")")
+      }
+    )

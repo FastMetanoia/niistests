@@ -1,6 +1,6 @@
 package v2
 
-import java.util.concurrent.atomic.AtomicLong
+
 import scalax.collection.immutable.Graph
 import scalax.collection.edges.labeled.WDiEdge
 import scalax.collection.edges.DiEdgeImplicits
@@ -77,7 +77,7 @@ object SimpleParallelTestingSolution
       val (g1, source) = addSource(sigs, g)
       val (g2, sink) = addSink(g1, ws.flatten, wsDisplays.flatten.toMap)
       val maxFlowGraph = removeSourceAndSink(
-        FordFulkersonMaximumFlow(g2, source, sink),
+        fordFulkersonMaximumFlow(g2, source, sink),
         source,
         sink
       )
@@ -124,6 +124,6 @@ object SimpleParallelTestingSolution
     actions
 
   override def agregateResults(
-      domainResults: Iterable[Seq[Action]]
-  ): Iterable[Action] = domainResults.flatten
+    domainResults: Iterable[Seq[Action]]
+    ): Iterable[Action] = domainResults.flatten
 }

@@ -38,6 +38,7 @@ case class MyEdge(from:Value, to:Value) extends AbstractDiEdge[Value](from, to)
     println(Seq(1,2,3,4,5).sortBy(x=>x))
 
 @main def testMain():Unit =
+  println((1 to 3).map(x=>x))
   val g = Graph.from[Int, WDiEdge[Int]](Seq(1,2,3), Seq(1~>2 % 1, 2~>3 % 2, 3~>1 % 2))
   // modification
   val ne = g.map(

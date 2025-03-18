@@ -22,7 +22,6 @@ def massTest() =
     systemModel.workstations.toSet
   )
 
-object SystemGraphOps {}
 
 @main def mmain() =
   // fulcersonTest()
@@ -75,6 +74,7 @@ object SystemGraphOps {}
     nodes = signals ++ videoshots ++ workstations,
     edges = edges1.map { (s, t) => s ~> t % 1 }
   )
+  
   val g2 = Graph.from[Int, WDiEdge[Int]](
     nodes = signals ++ videoshots ++ workstations,
     edges = edges2.map { (s, t) => s ~> t % 1 }

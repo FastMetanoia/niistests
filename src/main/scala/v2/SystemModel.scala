@@ -1,6 +1,6 @@
 package v2
 
-import java.util.concurrent.atomic.AtomicLong
+
 import scalax.collection.immutable.Graph
 import scalax.collection.edges.labeled.WDiEdge
 import scalax.collection.edges.DiEdgeImplicits
@@ -42,15 +42,7 @@ case class SystemModel(
     workstationDisplays: Map[Int, Int]
 ):
   override def toString(): String =
-    def printNodesSuccessors(setName: String, nodeSet: Seq[Int]): String =
-      printCollection(
-        setName,
-        nodeSet.map { s =>
-          s"$s-> " + (graph get s).diSuccessors.map(_.outer).mkString("(", ", ", ")")
-        }
-      )
-    val signalsPrint = signals
-    printNodesSuccessors("Signals", signals) +
-      printNodesSuccessors("Videoshots", videoshots) +
-      printNodesSuccessors("Workstations", workstations) +
+    showNodesSuccessors("Signals", graph, signals) +
+      showNodesSuccessors("Videoshots", graph, videoshots) +
+      showNodesSuccessors("Workstations", graph, workstations) +
       printCollection("Workstation Displays", workstationDisplays)

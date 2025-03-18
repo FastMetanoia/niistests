@@ -1,6 +1,6 @@
 package v2
 
-import java.util.concurrent.atomic.AtomicLong
+
 import scalax.collection.immutable.Graph
 import scalax.collection.edges.labeled.WDiEdge
 import scalax.collection.edges.DiEdgeImplicits

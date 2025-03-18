@@ -1,6 +1,5 @@
 package v2
 
-import java.util.concurrent.atomic.AtomicLong
 import scalax.collection.immutable.Graph
 import scalax.collection.edges.labeled.WDiEdge
 import scalax.collection.edges.DiEdgeImplicits
@@ -76,15 +75,17 @@ object ParallelSolutionAuxiliaries:
       signals: Seq[Int],
       sutturationMapping: Map[Int, Int]
   ): Boolean =
-    sutturationMapping.forall { (signalId, successorsNumber) =>
-      (flowGraph get signalId).edges
+    signals.forall { (signalId) =>
+      val sutturatedEdges = (flowGraph get signalId).edges
         .map(_.outer)
         .filter(_.source == signalId)
-        .map(_.weight)
-        .sum == successorsNumber
+        .filter(_.weight == 1d)
+      val number = sutturatedEdges
+        .size 
+      number == sutturationMapping(signalId)
     }
   
-  def FordFulkersonMaximumFlow(
+  def fordFulkersonMaximumFlow(
     graph: Graph[Int, WDiEdge[Int]],
     source: Int,
     destination: Int
@@ -149,7 +150,7 @@ object ParallelSolutionAuxiliaries:
     ): LazyList[Graph[Int, WDiEdge[Int]]] =
       // Выкинем из остаточной сети все рёбра <= 0
       val positiveRisidualNet =
-        Graph from (risidualNet.edges.toOuter.filter(edge => edge.weight > 0))
+        Graph from (risidualNet.nodes.toOuter, risidualNet.edges.toOuter.filter(edge => edge.weight > 0))
       // Найдём путь
       val path =
         (positiveRisidualNet get source) pathTo (positiveRisidualNet get destination)
@@ -205,4 +206,4 @@ object ParallelSolutionAuxiliaries:
       }
     )
     finalFlowGraph
-  end FordFulkersonMaximumFlow
+  end fordFulkersonMaximumFlow
