@@ -13,6 +13,8 @@ import scalax.collection.edges.DiEdgeImplicits
 import scalax.collection.generic.AnyEdge
 import scalax.collection.generic.AbstractDiEdge
 
+//import jgrapht
+
 sealed trait Value
 case class Is(x:Int) extends Value
 case class Js(x:Int) extends Value
