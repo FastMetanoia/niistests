@@ -4,9 +4,9 @@ import v2.GlobalAuxiliaries.*
 import scala.concurrent.Future
 import scala.concurrent.ExecutionContext
 
-class IdGenerator extends munit.FunSuite{
+class SystemGenerator extends munit.FunSuite{
   test("generation"){
-    initializeIdGeneratorIfNot()
+    initializeIdGenerator()
     def generate(n:Int) = (1 to 10).map(_=>generateId())
     assertEquals(generate(10), 1 to 10)
   }

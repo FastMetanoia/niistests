@@ -27,6 +27,9 @@ object GlobalAuxiliaries:
   def initializeIdGenerator(n:Int = 0):Unit = 
     currentId.complete(Success(AtomicInteger(n)))
 
+  def initializeIdGeneratorIfNot():Unit =
+    if(!currentId.isCompleted) initializeIdGenerator()
+
   def generateId():Int = 
     Await.result(currentId.future, Duration.Inf).incrementAndGet()
 
