@@ -48,7 +48,7 @@ class SequentialTestingSolution(graph: Graph[Int, WDiEdge[Int]])
       .map(v => signal -> v)
       .map((s, v) => (s, v.outer, (graph get v).diSuccessors.head.outer))
 
-  override def interpreteModel(
+  override def interpretModel(
       calculationResult: Set[(Int, Int, Int)]
   ): Set[Action] =
     calculationResult.map { singleResult =>
@@ -58,7 +58,7 @@ class SequentialTestingSolution(graph: Graph[Int, WDiEdge[Int]])
       Action(signals = Set(s), Map(v -> w))
     }
 
-  override def agregateResults(
+  override def aggregateResults(
       domainResults: Iterable[Set[Action]]
   ): Seq[Action] = domainResults.flatten.toSeq
 }

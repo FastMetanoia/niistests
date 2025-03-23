@@ -52,9 +52,9 @@ object SimpleParallelTestingSolution
     )
 
   override def calculateModel(
-      caclucaltionInput: PreparedGraph
+                               calculationInput: PreparedGraph
   ): ProcessedGraph =
-    // Распаковка даннных
+    // Распаковка данных
     val PreparedGraph(
       signals,
       source,
@@ -62,46 +62,46 @@ object SimpleParallelTestingSolution
       graph,
       workstations,
       workstationDisplays
-    ) = caclucaltionInput
+    ) = calculationInput
 
     // number of connections for each signal
-    val signalsSutturation =
+    val signalsSaturation =
       signals.map(s => s -> (graph get s).diSuccessors.size).toMap
 
     def go(
-        sigs: Seq[Int],
-        g: Graph[Int, WDiEdge[Int]],
-        ws: Seq[Seq[Int]],
-        wsDisplays: Seq[Map[Int, Int]]
+            signals: Seq[Int],
+            g: Graph[Int, WDiEdge[Int]],
+            ws: Seq[Seq[Int]],
+            wsDisplays: Seq[Map[Int, Int]]
     ): LazyList[(Graph[Int, WDiEdge[Int]], Seq[Seq[Int]])] =
-      val (g1, source) = addSource(sigs, g)
+      val (g1, source) = addSource(signals, g)
       val (g2, sink) = addSink(g1, ws.flatten, wsDisplays.flatten.toMap)
       val maxFlowGraph = removeSourceAndSink(
-        fordFulkersonMaximumFlow(g2, source, sink),
+        jMaxFlow(g2, source, sink),
         source,
         sink
       )
-      // All edges are sutturated than we have a final flow version
-      if (isSutturated(maxFlowGraph, sigs, signalsSutturation))
+      // All edges are saturated than we have a final flow version
+      if (isSaturated(maxFlowGraph, signals, signalsSaturation))
         LazyList((maxFlowGraph, ws))
       else
         // if not, we duplicate the workstations and recalculate the flow
         val (newG, newWs, newWsMapping) =
           duplicateWorkstations(g, workstations, workstationDisplays)
         (maxFlowGraph, ws) #:: go(
-          sigs,
+          signals,
           newG,
           ws.appended(newWs),
           wsDisplays.appended(newWsMapping)
         )
 
-    //   полный поток и коответствующее количество копий рабочих станций
+    //   полный поток и cоответствующее количество копий рабочих станций
     val (completeFlow, workstationBunches) =
       go(signals.toSeq, graph, Seq(workstations), Seq(workstationDisplays)).last
     ProcessedGraph(signals, completeFlow, workstationBunches)
 
-  override def interpreteModel(calculationResult: ProcessedGraph): Seq[Action] =
-    // Распаковка даннных
+  override def interpretModel(calculationResult: ProcessedGraph): Seq[Action] =
+    // Распаковка данных
     val ProcessedGraph(signals, completeFlow, workstationBunches) =
       calculationResult
 
@@ -117,13 +117,13 @@ object SimpleParallelTestingSolution
     // итог: действия
     val actions = actionsEdges.map { edges =>
       Action(
-        signals.toSet,
+        signals,
         edges.map(e => e.source -> e.target).toMap
       )
     }
     actions
 
-  override def agregateResults(
+  override def aggregateResults(
     domainResults: Iterable[Seq[Action]]
     ): Iterable[Action] = domainResults.flatten
 }

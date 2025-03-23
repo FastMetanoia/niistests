@@ -39,10 +39,10 @@ abstract class ProblemSolution[
   def calculateModel(
       caclucaltionInput: CalculationModelInput
   ): CaclulcationModelOutput
-  def interpreteModel(
+  def interpretModel(
       calculationResult: CaclulcationModelOutput
   ): DomainSolutionPart
-  def agregateResults(
+  def aggregateResults(
       domainResults: Iterable[DomainSolutionPart]
   ): DomainSolutionWhole
 
@@ -50,8 +50,8 @@ abstract class ProblemSolution[
     val calculatedSolutionParts = decomposeProblem(domainSystemModel)
       .map(transformToCalculationModel)
       .map(calculateModel)
-      .map(interpreteModel)
-    agregateResults(calculatedSolutionParts)
+      .map(interpretModel)
+    aggregateResults(calculatedSolutionParts)
 
   def solveProblemParallel(domainSystemModel: DomainSystemModel)(using
       ExecutionContext
@@ -60,9 +60,9 @@ abstract class ProblemSolution[
       Future(
         transformToCalculationModel
           .andThen(calculateModel)
-          .andThen(interpreteModel)(part)
+          .andThen(interpretModel)(part)
       )
     )
-    val futureResults = Future.sequence(resultParts).map(agregateResults)
+    val futureResults = Future.sequence(resultParts).map(aggregateResults)
     Await.result(futureResults, Duration.Inf)
 }

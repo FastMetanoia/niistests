@@ -9,18 +9,18 @@ import v2.GlobalAuxiliaries.generateSystemModel
 import v2.GlobalAuxiliaries.generateId
 
 object DataToTestOn {
-  object Simplest{
+  object Minimal{
     val model = generateSystemModel(
       1,
       1,
       1,
       1,
       1,
-      (0, 1)
+      (1, 2)
     )
   }
 
-  object Medium:
+  object Simple:
     val signals = Seq(generateId())
     val videoshots = (0 to 2).map(_=>generateId())
     val workstations = (0 to 3).map(_=>generateId())
@@ -68,5 +68,36 @@ object DataToTestOn {
       SystemModel(g1, signals, videoshots, workstations, workstationDisplays)
     val m2 =
       SystemModel(g2, signals, videoshots, workstations, workstationDisplays)
-  
+
+    val notFullModel = {
+      val signals = Seq(generateId())
+      val videoshots = (0 to 3).map(_=>generateId())
+      val workstations = (0 to 1).map(_=>generateId())
+
+      val workstationDisplays = Map(
+        workstations(0) -> 1,
+        workstations(1) -> 1
+      )
+
+      val edges =
+        videoshots.map(vs=> signals(0) -> vs) ++ Seq(
+          videoshots(0)->workstations(0),
+          videoshots(1)->workstations(1),
+          videoshots(2)->workstations(1),
+          videoshots(3)->workstations(1),
+        )
+      val graph = Graph.from(
+        nodes = signals ++ videoshots ++ workstations,
+        edges = edges.map { (s, t) => s ~> t % 1 }
+      )
+
+      SystemModel(
+        graph,
+        signals,
+        videoshots,
+        workstations,
+        workstationDisplays
+      )
+    }
 }
+

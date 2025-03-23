@@ -14,7 +14,7 @@ import v2.DataToTestOn
 
 class DuplicationTests extends munit.FunSuite {
   test("duplication working") {
-    val model = DataToTestOn.Simplest.model
+    val model = DataToTestOn.Minimal.model
     val SystemModel(
       graph, 
       signals, 
