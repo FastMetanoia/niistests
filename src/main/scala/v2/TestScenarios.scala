@@ -91,3 +91,9 @@ def massTest() =
 
 @main def testSps() =
   massTest()
+
+@main def testParallel() = 
+  initializeIdGeneratorIfNot()
+  val model = DataToTestOn.Simple.notFullModel
+  val scenario = SimpleParallelTestingSolution.solveProblem(model)
+  println(scenario)
