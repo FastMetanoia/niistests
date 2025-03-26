@@ -1,26 +1,12 @@
 
 
 
-import scalax.collection.edges.labeled.WDiEdge
-import scalax.collection.edges.DiEdgeImplicits
-import scalax.collection.edges.labeled.WDiEdgeFactory
-import scalax.collection.edges.labeled.:~>
-import scalax.collection.edges.labeled.%
-
-import scalax.collection.edges.DiEdge
-import scalax.collection.edges.DiEdgeImplicits
-import scalax.collection.generic.AnyEdge
-import scalax.collection.generic.AbstractDiEdge
 import org.jgrapht
 import org.jgrapht.*
 import org.jgrapht.graph.*
-import org.jgrapht.nio.*
-import org.jgrapht.nio.dot.*
-import org.jgrapht.traverse.*
-import scala.jdk.CollectionConverters._
-
 
 import java.net.URI
+import scala.jdk.CollectionConverters.*
 
 // jGraphT example
 @main def jGraphTest():Unit =
@@ -44,6 +30,12 @@ import java.net.URI
     .find(uri => uri.getHost.equals("www.jgrapht.org")).get
   println(start)
   println(g)
+
+@main def zipTest():Unit =
+  def cycledWorkstations(workstations: Seq[Int], i: Int = 0): LazyList[Int] =
+    workstations(i) #:: cycledWorkstations(workstations, (i + 1) % workstations.length)
+
+  println(s"cycledWorkstations(Seq(1,2,3)).take(10).toVector = ${cycledWorkstations(Seq(1,2,3)).take(10).toVector}")
 
 
 

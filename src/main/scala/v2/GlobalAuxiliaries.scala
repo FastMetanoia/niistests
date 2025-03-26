@@ -1,24 +1,14 @@
 package v2
 
-import scalax.collection.immutable.Graph
-import scalax.collection.edges.labeled.WDiEdge
 import scalax.collection.edges.DiEdgeImplicits
-import scalax.collection.edges.labeled.WDiEdgeFactory
-import scalax.collection.mutable
+import scalax.collection.edges.labeled.{WDiEdge, WDiEdgeFactory}
 import scalax.collection.immutable
-import scala.util.Random
+import scalax.collection.immutable.Graph
+
 import java.util.concurrent.atomic.AtomicInteger
-import scalax.collection.edges.labeled.:~>
-import scalax.collection.edges.labeled.%
-import scalax.collection.GraphOps
-import scalax.collection.AnyGraph
-import scala.concurrent.ExecutionContext
-import scala.concurrent.Future
-import scala.concurrent.Await
+import scala.concurrent.{Await, Promise}
 import scala.concurrent.duration.Duration
-import v2.GlobalAuxiliaries.*
-import scala.concurrent.Promise
-import scala.util.Success
+import scala.util.{Random, Success}
 
 object GlobalAuxiliaries:
   private val currentId:Promise[AtomicInteger] = Promise()
@@ -215,3 +205,11 @@ object GlobalAuxiliaries:
           .mkString("(", ", ", ")")
       }
     )
+  def showSystemGraph(graph: Graph[Int, WDiEdge[Int]], signals:Seq[Int]):String =
+    val signalsString = showNodesSuccessors("signals", graph, signals)
+    val videoshotsInner = signals.flatMap{s=> (graph get s).diSuccessors}.distinct
+    val workstationsInner = videoshotsInner.flatMap {v=> v.diSuccessors}.distinct
+    val videoString = showNodesSuccessors("videoshots", graph, videoshotsInner.map(_.outer))
+    val workstationString = showNodesSuccessors("workstations", graph, workstationsInner.map(_.outer))
+    val connectionsToSink = showNodesSuccessors("connections to sink", graph, workstationsInner.map(_.outer))
+    s"$signalsString\n\n$videoString\n\n$workstationString\n\n$connectionsToSink"

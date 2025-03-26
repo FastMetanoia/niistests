@@ -1,12 +1,9 @@
 package v2
 
-import scalax.collection.immutable.Graph
-import scalax.collection.edges.labeled.WDiEdge
 import scalax.collection.edges.DiEdgeImplicits
-import scalax.collection.edges.labeled.WDiEdgeFactory
-import v2.SystemModel
-import v2.GlobalAuxiliaries.generateSystemModel
-import v2.GlobalAuxiliaries.generateId
+import scalax.collection.edges.labeled.{WDiEdge, WDiEdgeFactory}
+import scalax.collection.immutable.Graph
+import v2.GlobalAuxiliaries.{generateId, generateSystemModel}
 
 object DataToTestOn {
   object Minimal{

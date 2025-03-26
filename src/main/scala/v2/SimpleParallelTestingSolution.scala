@@ -1,24 +1,9 @@
 package v2
 
 
-import scalax.collection.immutable.Graph
 import scalax.collection.edges.labeled.WDiEdge
-import scalax.collection.edges.DiEdgeImplicits
-import scalax.collection.edges.labeled.WDiEdgeFactory
-import scalax.collection.mutable
 import scalax.collection.immutable
-import scala.util.Random
-import java.util.concurrent.atomic.AtomicInteger
-import scalax.collection.edges.labeled.:~>
-import scalax.collection.edges.labeled.%
-import scalax.collection.GraphOps
-import scala.collection.IndexedSeqView.Id
-import scalax.collection.edges.UnDiEdge
-import scalax.collection.AnyGraph
-import scala.concurrent.ExecutionContext
-import scala.concurrent.Future
-import scala.concurrent.Await
-import scala.concurrent.duration.Duration
+import scalax.collection.immutable.Graph
 import v2.GlobalAuxiliaries.*
 import v2.ParallelSolutionAuxiliaries.* 
 
@@ -74,13 +59,10 @@ object SimpleParallelTestingSolution
             ws: Seq[Seq[Int]],
             wsDisplays: Seq[Map[Int, Int]]
     ): LazyList[(Graph[Int, WDiEdge[Int]], Seq[Seq[Int]])] =
-      val (g1, source) = addSource(signals, g)
-      val (g2, sink) = addSink(g1, ws.flatten, wsDisplays.flatten.toMap)
-      val maxFlowGraph = removeSourceAndSink(
-        jMaxFlow(g2, source, sink),
-        source,
-        sink
-      )
+      //val (g1, source) = addSource(signals, g)
+      //val (g2, sink) = addSink(g1, ws.flatten, wsDisplays.flatten.toMap)
+      val maxFlowGraph = jMaxFlow(g, source, sink)
+//      println(showSystemGraph(maxFlowGraph,signals))
       // All edges are saturated than we have a final flow version
       if (isSaturated(maxFlowGraph, signals, signalsSaturation))
         LazyList((maxFlowGraph, ws))
@@ -98,19 +80,25 @@ object SimpleParallelTestingSolution
     //   полный поток и cоответствующее количество копий рабочих станций
     val (completeFlow, workstationBunches) =
       go(signals.toSeq, graph, Seq(workstations), Seq(workstationDisplays)).last
-    ProcessedGraph(signals, completeFlow, workstationBunches)
+    ProcessedGraph(signals, completeFlow, workstations, workstationBunches)
 
   override def interpretModel(calculationResult: ProcessedGraph): Seq[Action] =
     // Распаковка данных
-    val ProcessedGraph(signals, completeFlow, workstationBunches) =
+    val ProcessedGraph(signals, completeFlow, originalWorkstations, workstationBunches) =
       calculationResult
 
+    def cycledWorkstations(workstations:Seq[Int], i:Int = 0):LazyList[Int] =
+      workstations(i) #:: cycledWorkstations(workstations, (i+1) % workstations.length)
+
+    val cycledOriginalWorkstations = cycledWorkstations(originalWorkstations)
+
     // рёбра отсортированные в по шагам
-    val actionsEdges = workstationBunches.map {
-      _.flatMap { worstation =>
-        (completeFlow get worstation).edges
+    val actionsEdges = workstationBunches.map { bunch=>
+      bunch.zip(cycledOriginalWorkstations).flatMap { (copy, original) =>
+        (completeFlow get copy).edges
           .map(_.outer)
-          .filter(e => e.target == worstation && e.weight > 0)
+          .filter(e => e.target == copy && e.weight > 0)
+          .map(e=>(e, original))
       }
     }
 
@@ -118,7 +106,7 @@ object SimpleParallelTestingSolution
     val actions = actionsEdges.map { edges =>
       Action(
         signals,
-        edges.map(e => e.source -> e.target).toMap
+        edges.map((e, original) => e.source -> original).toMap
       )
     }
     actions

@@ -1,28 +1,12 @@
 package v2
 
 
-import scalax.collection.immutable.Graph
-import scalax.collection.edges.labeled.WDiEdge
 import scalax.collection.edges.DiEdgeImplicits
-import scalax.collection.edges.labeled.WDiEdgeFactory
-import scalax.collection.mutable
+import scalax.collection.edges.labeled.{WDiEdge, WDiEdgeFactory}
 import scalax.collection.immutable
-
-import scala.util.Random
-import java.util.concurrent.atomic.AtomicInteger
-import scalax.collection.edges.labeled.:~>
-import scalax.collection.edges.labeled.%
-import scalax.collection.GraphOps
-
-import scala.collection.IndexedSeqView.Id
-import scalax.collection.edges.UnDiEdge
-import scalax.collection.AnyGraph
-
-import scala.concurrent.ExecutionContext
-import scala.concurrent.Future
-import scala.concurrent.Await
-import scala.concurrent.duration.Duration
+import scalax.collection.immutable.Graph
 import v2.GlobalAuxiliaries.*
+
 import scala.jdk.CollectionConverters.*
 
 object ParallelSolutionAuxiliaries:
@@ -38,10 +22,15 @@ object ParallelSolutionAuxiliaries:
 
     val newEdges = oldNewMapping.flatMap { elem =>
       val (oldId, (newId, displaysNumber)) = elem
-      (g get oldId).diPredecessors.map(_.outer).map { pred =>
+      val predecessors = (g get oldId).diPredecessors.map(_.outer).map { pred =>
         // todo: 0 or 1?
-        pred ~> newId % 0
+        pred ~> newId % 1
       }
+      val successors = (g get oldId).diSuccessors.map(_.outer).map { succ =>
+        // todo: 0 or 1?
+        newId ~> succ % 1
+      }
+      predecessors ++ successors
     }
 
     val newMapping = oldNewMapping.map { elem =>
@@ -71,6 +60,7 @@ object ParallelSolutionAuxiliaries:
   case class ProcessedGraph(
       signals: Set[Int],
       graph: Graph[Int, WDiEdge[Int]],
+      originalWorkstations: Seq[Int],
       workstationBunches: Seq[Seq[Int]]
   )
 
@@ -95,10 +85,8 @@ object ParallelSolutionAuxiliaries:
                source: Int,
                sink: Int
              ): Graph[Int, WDiEdge[Int]] =
-    import org.jgrapht.graph.SimpleDirectedWeightedGraph
-    import org.jgrapht.graph.DefaultWeightedEdge
-
     import org.jgrapht.alg.flow.BoykovKolmogorovMFImpl as BKMF
+    import org.jgrapht.graph.{DefaultWeightedEdge, SimpleDirectedWeightedGraph}
 
     val g = SimpleDirectedWeightedGraph[Int, DefaultWeightedEdge](classOf[DefaultWeightedEdge])
     graph.nodes.foreach(n=> g.addVertex(n.outer))
