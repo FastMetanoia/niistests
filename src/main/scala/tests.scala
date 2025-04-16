@@ -17,6 +17,7 @@ import scala.jdk.CollectionConverters.*
 
   // add the vertices
   g.addVertex(google)
+  g.addVertex(google)
   g.addVertex(wikipedia)
   g.addVertex(jgrapht)
 

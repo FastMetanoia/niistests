@@ -1,14 +1,16 @@
 package v2
 
+import os.{FilePath, Path, RelPath, SubPath}
 import scalax.collection.edges.DiEdgeImplicits
 import scalax.collection.edges.labeled.{WDiEdge, WDiEdgeFactory}
 import scalax.collection.immutable
 import scalax.collection.immutable.Graph
 
+
 import java.util.concurrent.atomic.AtomicInteger
 import scala.concurrent.{Await, Promise}
 import scala.concurrent.duration.Duration
-import scala.util.{Random, Success}
+import scala.util.{Random, Success, Try}
 
 object GlobalAuxiliaries:
   private val currentId:Promise[AtomicInteger] = Promise()
@@ -151,14 +153,15 @@ object GlobalAuxiliaries:
       source
     )
   def writeGraphToGraphML(
-      graph: Graph[Int, WDiEdge[Int]],
-      fileName: String,
-      signals: Set[Int],
-      videoshots: Set[Int],
-      workstations: Set[Int]
+                           graph: Graph[Int, WDiEdge[Int]],
+                           dir: Path,
+                           baseName: String,
+                           signals: Set[Int],
+                           videoshots: Set[Int],
+                           workstations: Set[Int]
   ): Unit =
     val prolog = """<?xml version="1.0" encoding="UTF-8"?>
-<graphml xmlns="http://graphml.graphdrawing.org/xmlns"  
+<graphml xmlns="http://graphml.graphdrawing.org/xmlns"
     xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
     xsi:schemaLocation="http://graphml.graphdrawing.org/xmlns
     http://graphml.graphdrawing.org/xmlns/1.0/graphml.xsd">
@@ -188,9 +191,32 @@ object GlobalAuxiliaries:
     val composed =
       prolog + nodes.mkString("\n") + "\n" + edges.mkString("\n") + epilog
 
-    val file = os.temp.dir() / (fileName + ".graphml")
+    val file = dir / (baseName + ".graphml")
     os.write.over(file, composed)
     println(s"graph saved to ${file}")
+
+  def writeWorkstationMapping(mapping:Map[Int, Int], filePath:Path):Unit =
+    val data = mapping.iterator.map((id, number)=>s"$id:$number\n").reduce(_ + _)
+    os.write.over(filePath, data)
+
+  def readWorkstationMapping(filePath:Path):Try[Map[Int,Int]] =
+    Try{
+      os.read.lines(filePath).to(LazyList).map {
+        _.split(":") match
+          case Array(s1, s2) => (s1.toInt, s2.toInt)
+          case _ => throw new Exception("Wrong file format. Expected pair of int values separated with \":\". For example:\"10:3\"")
+      }.toMap
+    }
+
+  def writeSystemToFiles(system:SystemModel, baseName:String, dir:Path) =
+    writeGraphToGraphML(
+      system.graph,
+      dir,
+      baseName,
+      system.signals.toSet,
+      system.videoshots.toSet,
+      system.workstations.toSet)
+    writeWorkstationMapping(system.workstationDisplays, dir / baseName)
 
   def showNodesSuccessors(
       setName: String,
@@ -205,6 +231,7 @@ object GlobalAuxiliaries:
           .mkString("(", ", ", ")")
       }
     )
+
   def showSystemGraph(graph: Graph[Int, WDiEdge[Int]], signals:Seq[Int]):String =
     val signalsString = showNodesSuccessors("signals", graph, signals)
     val videoshotsInner = signals.flatMap{s=> (graph get s).diSuccessors}.distinct

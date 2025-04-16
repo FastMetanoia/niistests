@@ -4,33 +4,35 @@ package v2
 import scalax.collection.edges.labeled.WDiEdge
 import scalax.collection.immutable
 import scalax.collection.immutable.Graph
+import v2.ParallelSolutionAuxiliaries.{PreparedGraph, ProcessedGraph}
 
-class SequentialTestingSolution(graph: Graph[Int, WDiEdge[Int]])
+object SequentialTestingSolution
     extends ProblemSolution[
       SystemModel,
-      Int,
-      Int,
+      (Int, SystemModel),
+      (Int, SystemModel),
       Set[(Int, Int, Int)],
       Set[Action],
-      Seq[Action]
+      Iterable[Action]
     ] {
-
   override def decomposeProblem(
       domainSystemModel: SystemModel
-  ): Seq[Int] =
-    domainSystemModel.signals
+  ): Seq[(Int, SystemModel)] =
+    domainSystemModel.signals.map(s => (s, domainSystemModel))
+
   override def transformToCalculationModel(
-      problemPart: Int
-  ): Int = problemPart
+      problemPart: (Int, SystemModel)
+  ):(Int, SystemModel) = problemPart
 
   override def calculateModel(
-      caclucaltionInput: Int
+                               calculationInput: (Int, SystemModel)
   ): Set[(Int, Int, Int)] =
-    val signal = caclucaltionInput
+    val (signal, model) = calculationInput
     // Перебор всех пар сигнал-видеокадр c первой попавшейся рабочей станцией.
-    (graph get signal).diSuccessors
+    (model.graph get signal).diSuccessors
       .map(v => signal -> v)
-      .map((s, v) => (s, v.outer, (graph get v).diSuccessors.head.outer))
+      .map((s, v) => (s, v.outer, (model.graph get v).diSuccessors.head.outer))
+      
 
   override def interpretModel(
       calculationResult: Set[(Int, Int, Int)]
@@ -42,7 +44,6 @@ class SequentialTestingSolution(graph: Graph[Int, WDiEdge[Int]])
       Action(signals = Set(s), Map(v -> w))
     }
 
-  override def aggregateResults(
-      domainResults: Iterable[Set[Action]]
-  ): Seq[Action] = domainResults.flatten.toSeq
+  override def aggregateResults(domainResults: Iterable[Set[Action]]): Seq[Action] =
+    domainResults.flatten.toSeq
 }

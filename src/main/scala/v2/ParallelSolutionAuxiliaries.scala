@@ -23,11 +23,9 @@ object ParallelSolutionAuxiliaries:
     val newEdges = oldNewMapping.flatMap { elem =>
       val (oldId, (newId, displaysNumber)) = elem
       val predecessors = (g get oldId).diPredecessors.map(_.outer).map { pred =>
-        // todo: 0 or 1?
         pred ~> newId % 1
       }
       val successors = (g get oldId).diSuccessors.map(_.outer).map { succ =>
-        // todo: 0 or 1?
         newId ~> succ % 1
       }
       predecessors ++ successors
@@ -89,16 +87,26 @@ object ParallelSolutionAuxiliaries:
     import org.jgrapht.graph.{DefaultWeightedEdge, SimpleDirectedWeightedGraph}
 
     val g = SimpleDirectedWeightedGraph[Int, DefaultWeightedEdge](classOf[DefaultWeightedEdge])
-    graph.nodes.foreach(n=> g.addVertex(n.outer))
-    graph.edges.toOuter.foreach(e=>
+
+    val reachableEdges = {
+      def getReachableEdges(node: graph.NodeT):Set[graph.EdgeT] =
+        node.outgoing ++ node.diSuccessors.flatMap(getReachableEdges)
+
+      getReachableEdges(graph get source).map(_.outer)
+    }
+
+    val reachableNodes = reachableEdges.flatMap(e=>Seq(e.source, e.target))
+
+    reachableNodes.foreach(g.addVertex)
+    reachableEdges.foreach{ e=>
       val edge = g.addEdge(e.source, e.target)
       g.setEdgeWeight(edge, e.weight)
-    )
+    }
 
-    val bkmf = BKMF(g)
-    val result = bkmf.getMaximumFlow(source, sink)
-    val flowMap = result.getFlowMap.asScala
-    val edges = flowMap.map {
+    val edges = BKMF(g)
+      .getMaximumFlow(source, sink)
+      .getFlowMap.asScala
+      .map {
       (edge, flow) => g.getEdgeSource(edge) ~> g.getEdgeTarget(edge) % flow
     }
 
