@@ -93,9 +93,9 @@ import scala.util.Random
     val armIndexMap = indexShowMap(arms, "arm")
     val videoshotIndexMap = indexShowMap(videoshots, "v")
     val signalIndexMap = indexShowMap(signals, "s")
-    val stepsString = sb.steps.map {
-      case ScenarioValidationStep(confId, arm, videoShot, ss) =>
-        s"Step($confId:${armIndexMap(arm)},${videoshotIndexMap(videoShot)},Signals(${ss.map(signalIndexMap).mkString(", ")})"
+    val stepsString = sb.steps.map { s =>
+        s"Emit and test signal: ${signalIndexMap(s)}"
+        //s"Step($confId:${armIndexMap(arm)},${videoshotIndexMap(videoShot)},Signals(${ss.map(signalIndexMap).mkString(", ")})"
     }.mkString("\n")
     val configurationPrefixString = s"SetConfiguration(${sb.videoshotsConfiguration.id},"
     val configurationMappingsString = sb.videoshotsConfiguration.vs.map {

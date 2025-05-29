@@ -20,7 +20,7 @@ case class ScenarioValidationStep( configurationId:Int,
                                   //display:Display,
                                   videoShot: VideoShot,
                                   ss:Set[Signal])
-case class ScenarioBlock(videoshotsConfiguration: VideoshotsConfiguration, steps:Seq[ScenarioValidationStep])
+case class ScenarioBlock(videoshotsConfiguration: VideoshotsConfiguration, steps:Seq[Signal])
 
 case class VideoshotsConfiguration(id:Int, vs:Map[ARM, Set[VideoShot]])
 
@@ -75,11 +75,11 @@ def getSteps(vClusters:Seq[VCluster], arms:Set[ARM]):Seq[ScenarioBlock] = {
         arm -> arm.vs.intersect(c.vs)
       }.toMap
     )
-    val steps = configuration.vs.flatMap {
-      case (arm, vs) =>
-        vs.map(v=> ScenarioValidationStep(i, arm, v, c.ss))
-    }
-    ScenarioBlock(configuration, steps.toSeq)
+//    val steps = configuration.vs.flatMap {
+//      case (arm, vs) =>
+//        vs.map(v=> ScenarioValidationStep(i, arm, v, c.ss))
+//    }
+    ScenarioBlock(configuration, c.ss.toSeq)
   }
 }
 
