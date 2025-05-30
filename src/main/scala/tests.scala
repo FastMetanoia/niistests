@@ -109,6 +109,7 @@ import scala.util.Random
   }
 
 
+
   val k = 3
   val result = algLoop(k ,arms, mapping)
   val scenarioShow = getSteps(result, arms)
@@ -130,6 +131,40 @@ import scala.util.Random
   println(result.map(formatCluster(_, signals, videoshots)).mkString("\n"))
   println("#"*90)
   println(scenarioShow.map(formatBlock(_, arms.toSeq, signals, videoshots)).mkString("\n"))
+  println("#"*90)
+  {
+    val generated = generateARMS(
+      armN = 3,
+      sigN = 30,
+      vidN = 10,
+      displayRange = (2, 5),
+      s2vN = 4,
+      v2armRange = (2, 6)
+    )
+    //1. выбрать k = Sum(|Di|) Множество проверенных кластеров (Tested) - пустое
+    //2. Если k == 0 перейти к пункту (8)
+    //3. Найти все кластеры размера k, не являющиеся подмножествами* кластеров из Tested
+    //4. Полученные кластеры отфильтровать: оставить те, которые могут быть открыты на дисплеях.
+    //5. Добавить получившиеся кластеры в множество Tested
+    //6. k = k-1
+    //7. Перейти к пунтку 2
+
+    //8. Из множества кластеров Tested сформировать шаги алгоритма. Для каждого кластера:
+    //8.1 Первый шаг - конфигурирование системы.
+    //8.2 Шаги после первого - последовательная имитация и тестирование сигналов
+
+    def calcK(arms:Set[ARM]):Int = arms.map(_.ds.size).sum
+    val result = algLoop(
+      calcK(generated.arms),
+      generated.arms,
+      generated.mapping
+    )
+    println(result.map(formatCluster(_, signals, videoshots)).mkString("\n"))
+    println("#" * 90)
+    println(scenarioShow.map(formatBlock(_, arms.toSeq, signals, videoshots)).mkString("\n"))
+  }
+  println("#"*90)
+
 }
 
 def pick(n: Int, rangeLimit: Int) =
@@ -147,21 +182,33 @@ def pick(n: Int, rangeLimit: Int) =
     chosen.appended(pickDifferent(chosen, rangeLimit))
   )
 
+
+//case class ARM(id:ID, ds:Set[Display], vs:Set[VideoShot], ss:Set[Signal])
 case class TestedSystem(arms:Set[ARM], signals:Set[Signal], videoshots: Set[VideoShot], mapping:SignalShotMapping)
 def generateARMS( armN:Int,
                   sigN:Int,
                   vidN:Int,
                   displayRange:(Int, Int),
                   s2vN:Int,
-                  v2arm:Int,
+                  v2armRange:(Int, Int)
                 ):TestedSystem ={
   val signals = for (_<-0 to sigN) yield Signal(UUID.randomUUID())
   val videoshots = for (_<-0 to sigN) yield VideoShot(UUID.randomUUID())
-  val mapping = signals.map{ s=>
-    s -> pick(s2vN, vidN).map(videoshots)
-  }
-  ???
+  val mapping:SignalShotMapping = signals.map{ s=>
+    s -> pick(s2vN, vidN).map(videoshots).toSet
+  }.toMap
+  val arms = for{
+    arm <- 0 to armN
+    r = Random.between(v2armRange._1,v2armRange._2)
+    videoShots = pick(r, vidN).map(videoshots).toSet
+    displayNumber = Random.between(displayRange._1, displayRange._2)
+    displays = (0 to displayNumber).map(_=>Display(UUID.randomUUID())).toSet
+    id = UUID.randomUUID()
+    signals = mapping.filter { case (s, vs) => vs.intersect(videoShots).nonEmpty }.keySet
+  } yield ARM(id, displays, videoShots, signals)
+  TestedSystem(arms.toSet, signals.toSet, videoshots.toSet, mapping)
 }
+
 
 
 
