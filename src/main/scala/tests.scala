@@ -41,43 +41,84 @@ import scala.util.Random
   println(s"cycledWorkstations(Seq(1,2,3)).take(10).toVector = ${cycledWorkstations(Seq(1,2,3)).take(10).toVector}")
 
 @main def eqTest():Unit = {
+//
+//  val videoshots = Seq(
+//    VideoShot(UUID.randomUUID()),
+//    VideoShot(UUID.randomUUID()),
+//    VideoShot(UUID.randomUUID()),
+//    VideoShot(UUID.randomUUID())
+//  )
+//  val signals = Seq(
+//    Signal(UUID.randomUUID()),
+//    Signal(UUID.randomUUID()),
+//    Signal(UUID.randomUUID())
+//  )
+//
+//  val mapping:SignalShotMapping = Map(
+//    signals(0) -> videoshots.toSet,
+//    signals(1) -> videoshots.take(3).toSet,
+//    signals(2) -> videoshots.takeRight(2).toSet
+//  )
+//
+//
+//  val arms = Set(
+//    ARM(
+//      UUID.randomUUID(),
+//      Set(Display(UUID.randomUUID()), Display(UUID.randomUUID())),
+//      Set(videoshots(0), videoshots(1)),
+//      Set(signals(0), signals(1)),
+//    ),
+//    ARM(
+//      UUID.randomUUID(),
+//      Set(Display(UUID.randomUUID())),
+//      Set(videoshots(2), videoshots(3)),
+//      Set(signals(0), signals(1), signals(2))
+//    )
+//  )
 
-  val videoshots = Seq(
-    VideoShot(UUID.randomUUID()),
-    VideoShot(UUID.randomUUID()),
-    VideoShot(UUID.randomUUID()),
-    VideoShot(UUID.randomUUID())
-  )
-  val signals = Seq(
-    Signal(UUID.randomUUID()),
-    Signal(UUID.randomUUID()),
-    Signal(UUID.randomUUID())
-  )
 
-  val mapping:SignalShotMapping = Map(
-    signals(0) -> videoshots.toSet,
-    signals(1) -> videoshots.take(3).toSet,
-    signals(2) -> videoshots.takeRight(2).toSet
-  )
+  def pick(n: Int, rangeLimit: Int) =
+    if (n > rangeLimit)
+      throw IllegalArgumentException(
+        s"An attempt to pick $n unique indices from 0 to $rangeLimit range"
+      )
 
+    def pickDifferent(chosen: Seq[Int], rangeLimit: Int): Int =
+      val candidate = Random.nextInt(rangeLimit)
+      if (!chosen.contains(candidate)) candidate
+      else pickDifferent(chosen, rangeLimit)
 
-  val arms = Set(
-    ARM(
-      UUID.randomUUID(),
-      Set(Display(UUID.randomUUID()), Display(UUID.randomUUID())),
-      Set(videoshots(0), videoshots(1)),
-      Set(signals(0), signals(1)),
-    ),
-    ARM(
-      UUID.randomUUID(),
-      Set(Display(UUID.randomUUID())),
-      Set(videoshots(2), videoshots(3)),
-      Set(signals(0), signals(1), signals(2))
+    (1 to n).foldLeft(Seq.empty[Int])((chosen, _) =>
+      chosen.appended(pickDifferent(chosen, rangeLimit))
     )
-  )
 
 
-  //case class VCluster(k: Int, vs: Set[VideoShot], ss: Set[Signal])
+  //case class ARM(id:ID, ds:Set[Display], vs:Set[VideoShot], ss:Set[Signal])
+  case class TestedSystem(arms: Set[ARM], signals: Set[Signal], videoshots: Set[VideoShot], mapping: SignalShotMapping)
+
+  def generateARMS(armN: Int,
+                   sigN: Int,
+                   vidN: Int,
+                   displayRange: (Int, Int),
+                   s2vN: Int,
+                   v2armRange: (Int, Int)
+                  ): TestedSystem = {
+    val signals = for (_ <- 0 to sigN) yield Signal(UUID.randomUUID())
+    val videoshots = for (_ <- 0 to sigN) yield VideoShot(UUID.randomUUID())
+    val mapping: SignalShotMapping = signals.map { s =>
+      s -> pick(s2vN, vidN).map(videoshots).toSet
+    }.toMap
+    val arms = for {
+      arm <- 0 to armN
+      r = Random.between(v2armRange._1, v2armRange._2)
+      videoShots = pick(r, vidN).map(videoshots).toSet
+      displayNumber = Random.between(displayRange._1, displayRange._2)
+      displays = (0 to displayNumber).map(_ => Display(UUID.randomUUID())).toSet
+      id = UUID.randomUUID()
+      signals = mapping.filter { case (s, vs) => vs.intersect(videoShots).nonEmpty }.keySet
+    } yield ARM(id, displays, videoShots, signals)
+    TestedSystem(arms.toSet, signals.toSet, videoshots.toSet, mapping)
+  }
 
   def indexShowMap[T](seq:Seq[T], prefix:String="", l:String="(", r:String = ")"):Map[T, String] =
     seq.zipWithIndex.map{
@@ -87,8 +128,11 @@ import scala.util.Random
   def formatCluster(cluster:VCluster, signals:Seq[Signal], videoshots: Seq[VideoShot]):String = {
     val signalsIndexMapping = indexShowMap(signals, "s")
     val videoshotsIndexMapping = indexShowMap(videoshots, "v")
+//    cluster.vs.tapEach(println)
+//    videoshotsIndexMapping.tapEach(println)
     s"VCluster(${cluster.k}, ${cluster.vs.map(videoshotsIndexMapping)}, ${cluster.ss.map(signalsIndexMapping)})"
   }
+  
   def formatBlock(sb:ScenarioBlock, arms:Seq[ARM], signals:Seq[Signal], videoshots:Seq[VideoShot]):String = {
     val armIndexMap = indexShowMap(arms, "arm")
     val videoshotIndexMap = indexShowMap(videoshots, "v")
@@ -107,39 +151,15 @@ import scala.util.Random
 
     confShow + "\n" + stepsString
   }
-
-
-
-  val k = 3
-  val result = algLoop(k ,arms, mapping)
-  val scenarioShow = getSteps(result, arms)
-//  val result = getClustersOfSize(
-//    k, arms, mapping, Seq.empty
-//  )
-//  println(result)
-//  println(result.map(formatCluster(_, signals, videoshots)).mkString("\n"))
-//  println("#"*80)
-//  val result2 = getClustersOfSize(
-//    k-1, arms, mapping, result.toSeq
-//  )
-//  println(result2.map(formatCluster(_, signals, videoshots)).mkString("\n"))
-//  println("#" * 80)
-//  val result3 = getClustersOfSize(
-//    k - 2, arms, mapping, result.toSeq ++ result2.toSeq
-//  )
-//  println(result3.map(formatCluster(_, signals, videoshots)).mkString("\n"))
-  println(result.map(formatCluster(_, signals, videoshots)).mkString("\n"))
-  println("#"*90)
-  println(scenarioShow.map(formatBlock(_, arms.toSeq, signals, videoshots)).mkString("\n"))
-  println("#"*90)
+  
   {
     val generated = generateARMS(
       armN = 3,
-      sigN = 30,
-      vidN = 10,
+      sigN = 10,
+      vidN = 3,
       displayRange = (2, 5),
-      s2vN = 4,
-      v2armRange = (2, 6)
+      s2vN = 2,
+      v2armRange = (1, 3)
     )
     //1. выбрать k = Sum(|Di|) Множество проверенных кластеров (Tested) - пустое
     //2. Если k == 0 перейти к пункту (8)
@@ -159,55 +179,15 @@ import scala.util.Random
       generated.arms,
       generated.mapping
     )
-    println(result.map(formatCluster(_, signals, videoshots)).mkString("\n"))
+    println(result.map(formatCluster(_, generated.signals.toSeq, generated.videoshots.toSeq)).mkString("\n"))
     println("#" * 90)
-    println(scenarioShow.map(formatBlock(_, arms.toSeq, signals, videoshots)).mkString("\n"))
+    println(generated.videoshots.map(_.id).mkString("\n"))
+    println(generated.mapping.flatMap(p=>p._2.map(p2=>s"${p._1.id}:${p2.id}")).mkString("\n"))
   }
-  println("#"*90)
+
 
 }
 
-def pick(n: Int, rangeLimit: Int) =
-  if (n > rangeLimit)
-    throw IllegalArgumentException(
-      s"An attempt to pick $n unique indices from 0 to $rangeLimit range"
-    )
-
-  def pickDifferent(chosen: Seq[Int], rangeLimit: Int): Int =
-    val candidate = Random.nextInt(rangeLimit)
-    if (!chosen.contains(candidate)) candidate
-    else pickDifferent(chosen, rangeLimit)
-
-  (1 to n).foldLeft(Seq.empty[Int])((chosen, _) =>
-    chosen.appended(pickDifferent(chosen, rangeLimit))
-  )
-
-
-//case class ARM(id:ID, ds:Set[Display], vs:Set[VideoShot], ss:Set[Signal])
-case class TestedSystem(arms:Set[ARM], signals:Set[Signal], videoshots: Set[VideoShot], mapping:SignalShotMapping)
-def generateARMS( armN:Int,
-                  sigN:Int,
-                  vidN:Int,
-                  displayRange:(Int, Int),
-                  s2vN:Int,
-                  v2armRange:(Int, Int)
-                ):TestedSystem ={
-  val signals = for (_<-0 to sigN) yield Signal(UUID.randomUUID())
-  val videoshots = for (_<-0 to sigN) yield VideoShot(UUID.randomUUID())
-  val mapping:SignalShotMapping = signals.map{ s=>
-    s -> pick(s2vN, vidN).map(videoshots).toSet
-  }.toMap
-  val arms = for{
-    arm <- 0 to armN
-    r = Random.between(v2armRange._1,v2armRange._2)
-    videoShots = pick(r, vidN).map(videoshots).toSet
-    displayNumber = Random.between(displayRange._1, displayRange._2)
-    displays = (0 to displayNumber).map(_=>Display(UUID.randomUUID())).toSet
-    id = UUID.randomUUID()
-    signals = mapping.filter { case (s, vs) => vs.intersect(videoShots).nonEmpty }.keySet
-  } yield ARM(id, displays, videoShots, signals)
-  TestedSystem(arms.toSet, signals.toSet, videoshots.toSet, mapping)
-}
 
 
 

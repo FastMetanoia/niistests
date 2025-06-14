@@ -5,7 +5,7 @@ import scalax.collection.edges.DiEdgeImplicits
 import scalax.collection.edges.labeled.{WDiEdge, WDiEdgeFactory}
 import scalax.collection.immutable
 import scalax.collection.immutable.Graph
-
+import v2.SystemModel.SystemModelProps
 
 import java.util.concurrent.atomic.AtomicInteger
 import scala.concurrent.{Await, Promise}
@@ -15,7 +15,6 @@ import scala.util.{Random, Success, Try}
 object GlobalAuxiliaries:
   private val currentId:Promise[AtomicInteger] = Promise()
 
-  
   def initializeIdGenerator(n:Int = 0):Unit = 
     currentId.complete(Success(AtomicInteger(n)))
 
@@ -84,8 +83,13 @@ object GlobalAuxiliaries:
       signalNodes,
       videoNodes,
       workstationNodes,
-      workstationDisplays
+      workstationDisplays,
+      SystemModelProps(signals, videoshots, workstations, signal2Shots, shot2Workstations, displayLimits)
     )
+
+  def generateSystemModel(props: SystemModelProps): SystemModel =
+    val SystemModelProps(signals, videoshots, workstations, signal2Shots, shot2Workstations, displayLimits) = props
+    generateSystemModel(signals, videoshots, workstations, signal2Shots, shot2Workstations, displayLimits)
 
   def printCollection[X](title: String, coll: Iterable[X]): String =
     s"$title:\n\t${coll.mkString("\n\t")}\n"

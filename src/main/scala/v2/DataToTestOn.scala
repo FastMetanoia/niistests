@@ -4,6 +4,7 @@ import scalax.collection.edges.DiEdgeImplicits
 import scalax.collection.edges.labeled.{WDiEdge, WDiEdgeFactory}
 import scalax.collection.immutable.Graph
 import v2.GlobalAuxiliaries.{generateId, generateSystemModel}
+import v2.SystemModel.defProps
 
 object DataToTestOn {
   object Minimal{
@@ -62,9 +63,9 @@ object DataToTestOn {
     )
 
     val m1 =
-      SystemModel(g1, signals, videoshots, workstations, workstationDisplays)
+      SystemModel(g1, signals, videoshots, workstations, workstationDisplays, defProps)
     val m2 =
-      SystemModel(g2, signals, videoshots, workstations, workstationDisplays)
+      SystemModel(g2, signals, videoshots, workstations, workstationDisplays, defProps)
 
     val notFullModel = {
       val signals = Seq(generateId())
@@ -93,7 +94,8 @@ object DataToTestOn {
         signals,
         videoshots,
         workstations,
-        workstationDisplays
+        workstationDisplays,
+        defProps
       )
     }
 }

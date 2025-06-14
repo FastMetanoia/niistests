@@ -1,5 +1,10 @@
 package v2
 
+/**
+ * 
+ * @param signals
+ * @param videoWorkstationMapping маппинг видеокадр->рабочая станция
+ */
 case class Action(signals: Set[Int], videoWorkstationMapping: Map[Int, Int]):
   def show:String =
     signals.mkString("(",",",")") +

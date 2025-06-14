@@ -1,11 +1,36 @@
 package v2
 import v2.GlobalAuxiliaries.*
-import scalax.collection.immutable.Graph
-import scalax.collection.edges.labeled.WDiEdge
-import scalax.collection.edges.DiEdgeImplicits
-import scalax.collection.edges.labeled.WDiEdgeFactory
 
 import scala.concurrent.ExecutionContext
+
+def testAndReport(
+                          model:SystemModel,
+                          problemSolutions: Iterable[ProblemSolution[SystemModel, ?, ?, ?, ?, Iterable[Action]]]
+                        ): LazyList[String] =
+  given ExecutionContext = ExecutionContext.global
+
+  val SystemModel(_,_,_,_,_,
+    SystemModel.SystemModelProps(signals, videoshots, workstations, signal2Shots, shot2Workstations, displayLimits)
+  ) = model
+
+  val totalPairs = SequentialTestingSolution.solveProblem(model).size
+  val displaysTotal = model.workstationDisplays.values.sum
+  val results = for{
+    problemSolution<-problemSolutions
+    ts0 = System.currentTimeMillis()
+    resultTestingScenario = problemSolution.solveProblemParallel(model)
+    ts1 = System.currentTimeMillis()
+
+    runDuration = ts1 - ts0
+    (displaysMinimum, displaysMaximum) = displayLimits
+    steps = resultTestingScenario.size
+
+    rMetric = (totalPairs + .0) / steps
+    rRelation = rMetric / displaysTotal
+  } yield s"$signals,$videoshots,$workstations,$signal2Shots,$shot2Workstations,$displaysMinimum,$displaysMaximum,$displaysTotal,$runDuration,$steps,$totalPairs,$rMetric,$rRelation"
+
+  LazyList.from(results)
+
 
 def massTest() =
   given ExecutionContext = ExecutionContext.global
@@ -29,7 +54,7 @@ def massTest() =
     systemModel.workstations.toSet
   )
   val ts0 = System.currentTimeMillis()
-  val resultTestingScenario = SimpleParallelTestingSolution.solveProblemParallel(systemModel)
+  val resultTestingScenario = FlowParallelTestingSolution.solveProblemParallel(systemModel)
   val ts1 = System.currentTimeMillis()
 
   println(resultTestingScenario.zipWithIndex.map((e, i)=> s"$i\t$e").mkString("\n"))
@@ -37,13 +62,12 @@ def massTest() =
 
 
 @main def testSps() =
-  //println(os.rel.toNIO.toAbsolutePath)
   massTest()
 
 @main def testParallel() =
   initializeIdGeneratorIfNot()
   def printScenariosToCompare(model: SystemModel):Unit =
-    val scenarioParallel = SimpleParallelTestingSolution.solveProblemParallel(model)(using ExecutionContext.global)
+    val scenarioParallel = FlowParallelTestingSolution.solveProblemParallel(model)(using ExecutionContext.global)
     val scenarioSequential = SequentialTestingSolution.solveProblem(model)
 
     println("Model:")
@@ -78,12 +102,19 @@ def massTest() =
   println(s"results for next model:\n$str")
   printScenariosToCompare(generated)
 
-
-//  println("m1:")
-//  printScenariosToCompare(DataToTestOn.Simple.m1)
-//  println("m2:")
-//  printScenariosToCompare(DataToTestOn.Simple.m2)
-//  println("not full:")
-//  printScenariosToCompare(DataToTestOn.Simple.notFullModel)
-
+@main def testCSV() =
+  initializeIdGeneratorIfNot()
+  val header = "signals, videoshots, workstations, signal2Shots, shot2Workstations, displaysMinimum, displaysMaximum, displaysTotal, scenario generation time, steps, total_pairs, rMetric, rLimit, rRelation"
+  val result = testAndReport(
+    generateSystemModel(
+      signals = 1000,
+      videoshots = 100,
+      workstations = 10,
+      signal2Shots = 12,
+      shot2Workstations = 2,
+      displayLimits = (2, 5)
+    ),
+    Seq(SequentialTestingSolution, FlowParallelTestingSolution)
+  )
+  println(result.toVector.mkString("\n"))
 

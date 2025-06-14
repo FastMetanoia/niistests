@@ -10,6 +10,7 @@ import scalax.collection.edges.~>
 import scalax.collection.edges.DiEdgeImplicits
 import scalax.collection.edges.labeled.WDiEdgeFactory
 import v2.SystemModel
+import v2.SystemModel.SystemModelProps
 
 import scala.jdk.CollectionConverters.given
 import java.io.FileReader
@@ -54,12 +55,25 @@ object GraphAuxiliaries:
       if (signals.exists(!_.hasSuccessors))               throw new IllegalArgumentException("Graph has wrong shape: Signal has no successors")
       if (videoshots.exists(!_.hasSuccessors))            throw new IllegalArgumentException("Graph has wrong shape: Videoshot has no successors")
 
+      val sigs = signals.map(_.outer).toSeq
+      val vids = videoshots.map(_.outer).toSeq
+      val works = workstations.map(_.outer).toSeq
+      
+      
       // Если всё ок
       SystemModel(
         graph,
-        signals.map(_.outer).toSeq,
-        videoshots.map(_.outer).toSeq,
-        workstations.map(_.outer).toSeq,
-        displayMapping
+        sigs,
+        vids,
+        works,
+        displayMapping,
+        SystemModelProps(
+          sigs.size,
+          vids.size,
+          works.size,
+          signals.head.diSuccessors.size,
+          videoshots.head.diSuccessors.size,
+          (displayMapping.values.min, displayMapping.values.max + 1)
+        )
       )
     }

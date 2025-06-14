@@ -24,10 +24,22 @@ case class SystemModel(
     signals: Seq[Int],
     videoshots: Seq[Int],
     workstations: Seq[Int],
-    workstationDisplays: Map[Int, Int]
+    workstationDisplays: Map[Int, Int],
+    props:SystemModel.SystemModelProps
 ):
   override def toString(): String =
     showNodesSuccessors("Signals", graph, signals) +
       showNodesSuccessors("Videoshots", graph, videoshots) +
       showNodesSuccessors("Workstations", graph, workstations) +
       printCollection("Workstation Displays", workstationDisplays)
+    
+  
+object SystemModel{
+  case class SystemModelProps(signals: Int,
+                              videoshots: Int,
+                              workstations: Int,
+                              signal2Shots: Int,
+                              shot2Workstations: Int,
+                              displayLimits: (Int, Int))
+  val defProps: SystemModelProps = SystemModelProps(0,0,0,0,0,(0,0))
+}

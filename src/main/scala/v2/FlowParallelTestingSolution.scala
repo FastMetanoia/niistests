@@ -7,7 +7,7 @@ import scalax.collection.immutable.Graph
 import v2.GlobalAuxiliaries.*
 import v2.ParallelSolutionAuxiliaries.* 
 
-object SimpleParallelTestingSolution
+object FlowParallelTestingSolution
     extends ProblemSolution[
       SystemModel,
       (Int, SystemModel),
@@ -92,7 +92,7 @@ object SimpleParallelTestingSolution
 
     val cycledOriginalWorkstations = cycledWorkstations(originalWorkstations)
 
-    // рёбра отсортированные в по шагам
+    // рёбра отсортированные по шагам
     val actionsEdges = workstationBunches.map { bunch=>
       bunch.zip(cycledOriginalWorkstations).flatMap { (copy, original) =>
         (completeFlow get copy).edges

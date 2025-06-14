@@ -9,7 +9,7 @@ abstract class ProblemSolution[
     DomainSystemModel,
     DomainProblemPart,
     CalculationModelInput,
-    CaclulcationModelOutput,
+    CalculationModelOutput,
     DomainSolutionPart,
     DomainSolutionWhole
 ] {
@@ -20,10 +20,10 @@ abstract class ProblemSolution[
       problemPart: DomainProblemPart
   ): CalculationModelInput
   def calculateModel(
-      caclucaltionInput: CalculationModelInput
-  ): CaclulcationModelOutput
+                      calculationInput: CalculationModelInput
+  ): CalculationModelOutput
   def interpretModel(
-      calculationResult: CaclulcationModelOutput
+      calculationResult: CalculationModelOutput
   ): DomainSolutionPart
   def aggregateResults(
       domainResults: Iterable[DomainSolutionPart]

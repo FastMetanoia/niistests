@@ -1,3 +1,5 @@
+
+
 import java.util.UUID
 import scala.annotation.tailrec
 //
@@ -27,7 +29,7 @@ case class VideoshotsConfiguration(id:Int, vs:Map[ARM, Set[VideoShot]])
 case class Scenario(steps:Seq[ScenarioBlock])
 
 //Шаг 1. Сформировать список кластеров величины К.
-def getClustersOfSize(k:Int, arms:Set[ARM], signalShotMapping: SignalShotMapping, oldClusters: Seq[VCluster]):Set[VCluster] = {
+def getClustersOfSize(k:Int, arms:Set[ARM], signalShotMapping: SignalShotMapping, oldClusters: Seq[VCluster] = Seq.empty):Set[VCluster] = {
   //Возьмём все сигналы, отображаемые на k или более видеокадрах.
   //Сформируем из них все возможные vcluster c одним сигналом и мощностью k
   val clusters = for {
@@ -93,9 +95,39 @@ def algLoop(k:Int, arms:Set[ARM], signalShotMapping: SignalShotMapping, clusters
       signalShotMapping, 
       clustersTested.appendedAll(getClustersOfSize(k, arms, signalShotMapping, clustersTested))
     )
-    
 
-  //???
+enum ClusterRelation{
+  case CONTAINS
+  case PARTICIPATES
+  case NONE
+}
+
+def calculateRelation(c1:VCluster, c2:VCluster):ClusterRelation =
+  import ClusterRelation.*
+  if (c1.vs.subsetOf(c2.vs)) PARTICIPATES
+  else if (c1.vs.subsetOf(c2.vs)) CONTAINS
+  else NONE
+
+
+
+def reorganizeVClusters(clusters:Seq[VCluster]):Seq[VCluster] = {
+  case class Pack(cluster:VCluster, subClusters:Seq[VCluster])
+
+  def findPack(cluster:VCluster, clusters: Seq[VCluster], known:Seq[VCluster] = Seq.empty): Pack =
+    import ClusterRelation.*
+    clusters.foldLeft(Pack(cluster, known)) { case (Pack(cluster, subClusters), c) =>
+      calculateRelation(cluster, c) match
+        case ClusterRelation.CONTAINS => Pack(cluster, subClusters.appended(c))
+        case ClusterRelation.PARTICIPATES => return findPack(c, clusters.filterNot(_ == c), known)
+        case ClusterRelation.NONE => Pack(cluster, subClusters)
+    }
+
+  ???
+}
+
+
+
+//???
 
 //def algorithmItself(arms:Set[ARM], signalShotMapping: SignalShotMapping):Unit = {
 //  //Шаг 0. k = |D|
