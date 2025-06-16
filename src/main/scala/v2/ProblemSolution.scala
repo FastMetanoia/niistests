@@ -48,4 +48,6 @@ abstract class ProblemSolution[
     )
     val futureResults = Future.sequence(resultParts).map(aggregateResults)
     Await.result(futureResults, Duration.Inf)
+
+  def name:String
 }

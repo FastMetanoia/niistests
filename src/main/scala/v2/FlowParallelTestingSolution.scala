@@ -111,6 +111,8 @@ object FlowParallelTestingSolution
     }
     actions
 
+  override def name: String = "SingleFlow"
+
   override def aggregateResults(
     domainResults: Iterable[Seq[Action]]
     ): Iterable[Action] = domainResults.flatten

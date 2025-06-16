@@ -1,35 +1,11 @@
 package v2
+import org.antlr.v4.runtime.atn.RuleStartState
 import v2.GlobalAuxiliaries.*
+import v2.SystemModel.SystemModelProps
+import v2.TestProvider.{makeDataGenerator, testAndReport}
 
 import scala.concurrent.ExecutionContext
-
-def testAndReport(
-                          model:SystemModel,
-                          problemSolutions: Iterable[ProblemSolution[SystemModel, ?, ?, ?, ?, Iterable[Action]]]
-                        ): LazyList[String] =
-  given ExecutionContext = ExecutionContext.global
-
-  val SystemModel(_,_,_,_,_,
-    SystemModel.SystemModelProps(signals, videoshots, workstations, signal2Shots, shot2Workstations, displayLimits)
-  ) = model
-
-  val totalPairs = SequentialTestingSolution.solveProblem(model).size
-  val displaysTotal = model.workstationDisplays.values.sum
-  val results = for{
-    problemSolution<-problemSolutions
-    ts0 = System.currentTimeMillis()
-    resultTestingScenario = problemSolution.solveProblemParallel(model)
-    ts1 = System.currentTimeMillis()
-
-    runDuration = ts1 - ts0
-    (displaysMinimum, displaysMaximum) = displayLimits
-    steps = resultTestingScenario.size
-
-    rMetric = (totalPairs + .0) / steps
-    rRelation = rMetric / displaysTotal
-  } yield s"$signals,$videoshots,$workstations,$signal2Shots,$shot2Workstations,$displaysMinimum,$displaysMaximum,$displaysTotal,$runDuration,$steps,$totalPairs,$rMetric,$rRelation"
-
-  LazyList.from(results)
+import scala.util.Random
 
 
 def massTest() =
@@ -102,11 +78,20 @@ def massTest() =
   println(s"results for next model:\n$str")
   printScenariosToCompare(generated)
 
+val algorithms = Seq(
+  SequentialTestingSolution,
+  GreedyParallelTestingSolution,
+  FlowParallelTestingSolution,
+  CliqueParallelTestingSolution
+)
+
 @main def testCSV() =
+
+
   initializeIdGeneratorIfNot()
-  val header = "signals, videoshots, workstations, signal2Shots, shot2Workstations, displaysMinimum, displaysMaximum, displaysTotal, scenario generation time, steps, total_pairs, rMetric, rLimit, rRelation"
-  val result = testAndReport(
-    generateSystemModel(
+
+  val stationaryData = makeDataGenerator(
+    SystemModel.SystemModelProps(
       signals = 1000,
       videoshots = 100,
       workstations = 10,
@@ -114,7 +99,45 @@ def massTest() =
       shot2Workstations = 2,
       displayLimits = (2, 5)
     ),
-    Seq(SequentialTestingSolution, FlowParallelTestingSolution)
+    identity
   )
-  println(result.toVector.mkString("\n"))
+
+  TestProvider.testAndWrite(stationaryData.take(100), algorithms, "StationaryTest")
+
+def overallGrowthExperiment() = {
+  initializeIdGeneratorIfNot()
+  val startState = SystemModel.SystemModelProps(
+    signals = 1000,
+    videoshots = 100,
+    workstations = 10,
+    signal2Shots = 12,
+    shot2Workstations = 2,
+    displayLimits = (2, 5)
+  )
+
+  val data = makeDataGenerator(
+    startState,
+    s=>SystemModelProps(
+      signals = s.signals + 100,
+      videoshots = s.videoshots + 10,
+      workstations = s.workstations + 1,
+      signal2Shots = if(s.workstations % 10 < 2) s.signal2Shots + 2 else s.signal2Shots + 1,
+      shot2Workstations = if(s.workstations % 10 < 2) s.shot2Workstations + 1 else s.shot2Workstations,
+      displayLimits = (2, 5)
+    )
+  )
+}
+//  val header = "signals, videoshots, workstations, signal2Shots, shot2Workstations, displaysMinimum, displaysMaximum, displaysTotal, scenario generation time, steps, total_pairs, rMetric, rLimit, rRelation"
+//  val result = testAndReport(
+//    generateSystemModel(
+//      signals = 1000,
+//      videoshots = 100,
+//      workstations = 10,
+//      signal2Shots = 12,
+//      shot2Workstations = 2,
+//      displayLimits = (2, 5)
+//    ),
+//    Seq(SequentialTestingSolution, FlowParallelTestingSolution)
+//  )
+//  println(result.toVector.mkString("\n"))
 

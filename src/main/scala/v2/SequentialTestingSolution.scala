@@ -46,4 +46,6 @@ object SequentialTestingSolution
 
   override def aggregateResults(domainResults: Iterable[Set[Action]]): Seq[Action] =
     domainResults.flatten.toSeq
+
+  override def name: String = "Seq"
 }

@@ -9,6 +9,7 @@ object GreedyParallelTestingSolution extends ProblemSolution[
   Iterable[(Int, Set[(Int, Seq[Int])])],
   Iterable[Action],
   Iterable[Action]]{
+  override def name: String = "Greedy"
 
   override def decomposeProblem(domainSystemModel: SystemModel): Iterable[(Int, SystemModel)] = domainSystemModel.signals.map(_->domainSystemModel)
 
@@ -33,7 +34,7 @@ object GreedyParallelTestingSolution extends ProblemSolution[
     if(availableVs.isEmpty)
       Seq((sig, wsMap))
     else
-      Seq((sig, wsMap)).appendedAll(calculateModel((sig, vs, model)))
+      Seq((sig, wsMap)).appendedAll(calculateModel((sig, availableVs, model)))
 
   override def interpretModel(calculationResult: Iterable[(Int, Set[(Int, Seq[Int])])]): Iterable[Action] =
     for {
