@@ -1,6 +1,7 @@
 package v2
-import org.antlr.v4.runtime.atn.RuleStartState
+//import org.antlr.v4.runtime.atn.RuleStartState
 import v2.GlobalAuxiliaries.*
+import v2.GlobalAuxiliaries.SignalShotRNG.ERLANG
 import v2.SystemModel.SystemModelProps
 import v2.TestProvider.{makeDataGenerator, testAndReport}
 
@@ -85,24 +86,20 @@ val algorithms = Seq(
   CliqueParallelTestingSolution
 )
 
-@main def testCSV() =
 
-
-  initializeIdGeneratorIfNot()
-
-  val stationaryData = makeDataGenerator(
-    SystemModel.SystemModelProps(
-      signals = 1000,
-      videoshots = 100,
-      workstations = 10,
-      signal2Shots = 12,
-      shot2Workstations = 2,
-      displayLimits = (2, 5)
-    ),
-    identity
+@main def testGen() =
+  generateSystemModel(
+    signals = 1000,
+    videoshots = 100,
+    workstations = 10,
+    signal2Shots = 12,
+    shot2Workstations = 2,
+    displayLimits = (2, 5)
   )
+@main def testCSV() =
+  signalsAndShotsGrowth()
 
-  TestProvider.testAndWrite(stationaryData.take(100), algorithms, "StationaryTest")
+
 
 def overallGrowthExperiment() = {
   initializeIdGeneratorIfNot()
@@ -126,18 +123,125 @@ def overallGrowthExperiment() = {
       displayLimits = (2, 5)
     )
   )
+  TestProvider.testAndWrite(data.take(100), algorithms, "OverallGrowthExperiment")
 }
-//  val header = "signals, videoshots, workstations, signal2Shots, shot2Workstations, displaysMinimum, displaysMaximum, displaysTotal, scenario generation time, steps, total_pairs, rMetric, rLimit, rRelation"
-//  val result = testAndReport(
-//    generateSystemModel(
-//      signals = 1000,
-//      videoshots = 100,
-//      workstations = 10,
-//      signal2Shots = 12,
-//      shot2Workstations = 2,
-//      displayLimits = (2, 5)
-//    ),
-//    Seq(SequentialTestingSolution, FlowParallelTestingSolution)
-//  )
-//  println(result.toVector.mkString("\n"))
+
+def stationaryTest() = {
+  initializeIdGeneratorIfNot()
+
+  val stationaryData = makeDataGenerator(
+    SystemModel.SystemModelProps(
+      signals = 1000,
+      videoshots = 100,
+      workstations = 10,
+      signal2Shots = 12,
+      shot2Workstations = 2,
+      displayLimits = (2, 5)
+    ),
+    identity
+  )
+
+  TestProvider.testAndWrite(stationaryData.take(100), algorithms, "StationaryTest")
+}
+
+def signalsGrowth()= {
+  initializeIdGeneratorIfNot()
+  val startState = SystemModel.SystemModelProps(
+    signals = 1000,
+    videoshots = 100,
+    workstations = 10,
+    signal2Shots = 12,
+    shot2Workstations = 2,
+    displayLimits = (2, 5)
+  )
+
+  val data = makeDataGenerator(
+    startState,
+    s => SystemModelProps(
+      signals = s.signals + 100,
+      videoshots = s.videoshots,
+      workstations = s.workstations ,
+      signal2Shots = s.signal2Shots,
+      shot2Workstations = s.shot2Workstations,
+      displayLimits = (2, 5)
+    )
+  )
+  TestProvider.testAndWrite(data.take(100), algorithms, "SignalsNumberGrowth")
+}
+
+def realNiiis() = {
+  initializeIdGeneratorIfNot()
+  val startState = SystemModel.SystemModelProps(
+    signals = 90000,
+    videoshots = 870,
+    workstations = 7,
+    signal2Shots = 3,
+    shot2Workstations = 2,
+    displayLimits = (2, 16),
+    ERLANG
+  )
+
+  val data = makeDataGenerator(
+    startState,
+    identity
+  )
+  TestProvider.testAndWrite(data.take(100),Seq(SequentialTestingSolution, FlowParallelTestingSolution),"RealNiiis")
+}
+
+def signalsAndShotsGrowth() = {
+  initializeIdGeneratorIfNot()
+  val startState = SystemModel.SystemModelProps(
+    signals = 1000,
+    videoshots = 100,
+    workstations = 10,
+    signal2Shots = 12,
+    shot2Workstations = 2,
+    displayLimits = (2, 5)
+  )
+
+  val data = makeDataGenerator(
+    startState,
+    s => SystemModelProps(
+      signals = s.signals + 100,
+      videoshots = s.videoshots + 10,
+      workstations = s.workstations,
+      signal2Shots = s.signal2Shots,
+      shot2Workstations = s.shot2Workstations,
+      displayLimits = (2, 5)
+    )
+  )
+  TestProvider.testAndWrite(data.take(100), algorithms, "SignalsAndShotsGrowth")
+}
+
+def signalsShotsWorkstationsGrowth() = {
+  initializeIdGeneratorIfNot()
+  val startState = SystemModel.SystemModelProps(
+    signals = 1000,
+    videoshots = 100,
+    workstations = 10,
+    signal2Shots = 12,
+    shot2Workstations = 2,
+    displayLimits = (2, 5)
+  )
+
+  val data = makeDataGenerator(
+    startState,
+    s => SystemModelProps(
+      signals = s.signals + 100,
+      videoshots = s.videoshots + 10,
+      workstations = s.workstations + 1,
+      signal2Shots = s.signal2Shots,
+      shot2Workstations = s.shot2Workstations,
+      displayLimits = (2, 5)
+    )
+  )
+  TestProvider.testAndWrite(data.take(100), algorithms, "SignalsShotsWorkstationsGrowth")
+}
+
+@main def runValidationExperiment() =
+  realNiiis()
+
+@main def knowPerc() =
+  println((os.read(os.pwd / "output" / "length.txt").chars().count() + 0.0) / 90000)
+
 

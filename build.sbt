@@ -11,7 +11,7 @@ val scala3Version = "3.6.4"
   fork := true
 
 
-libraryDependencies += "org.jgrapht" % "jgrapht" % "1.5.2"
+//libraryDependencies += "org.jgrapht" % "jgrapht" % "1.5.2"
 
 lazy val root = project
   .in(file("."))
@@ -27,7 +27,8 @@ lazy val root = project
       // "com.typesafe.akka" %% "akka-actor-typed" % akkaVersion,
       // "ch.qos.logback" % "logback-classic" % "1.2.13",
       // "com.typesafe.akka" %% "akka-actor-testkit-typed" % akkaVersion % Test,
-      "org.scalatest" %% "scalatest" % "3.2.18" % Test,
+      "org.scalatest" %% "scalatest" % "3.2.18" % Test
+      //"org.jliszka" %% "probability-monad" % "1.0.3",
       )
   )
 

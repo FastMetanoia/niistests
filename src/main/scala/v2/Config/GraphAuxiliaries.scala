@@ -4,8 +4,8 @@ import org.jgrapht.graph.{DefaultWeightedEdge, SimpleDirectedWeightedGraph}
 import org.jgrapht.graph.builder.GraphTypeBuilder
 import scalax.collection.edges.labeled.WDiEdge
 import scalax.collection.immutable.Graph
-import org.jgrapht.nio.graphml.GraphMLImporter
-import org.jgrapht.nio.graphml.*
+//import org.jgrapht.nio.graphml.GraphMLImporter
+//import org.jgrapht.nio.graphml.*
 import scalax.collection.edges.~>
 import scalax.collection.edges.DiEdgeImplicits
 import scalax.collection.edges.labeled.WDiEdgeFactory
@@ -28,10 +28,10 @@ object GraphAuxiliaries:
   def readFromGraphML(filePath:String):Graph[Int, WDiEdge[Int]] =
     val graph = SimpleDirectedWeightedGraph[Int, DefaultWeightedEdge](classOf[DefaultWeightedEdge])
     val fileReader = new FileReader(filePath)
-    new GraphMLImporter()
-      .importGraph(graph, fileReader)
+    //new GraphMLImporter().importGraph(graph, fileReader)
     fileReader.close()
     graph.asScalaxGraph
+    ???
 
   def SystemFromGraph(graph: Graph[Int, WDiEdge[Int]], displayMapping:Map[Int, Int]):Try[SystemModel] =
     // Если нет предшественников - значит сигнал

@@ -5,6 +5,7 @@ import scalax.collection.edges.DiEdgeImplicits
 import scalax.collection.edges.labeled.{WDiEdge, WDiEdgeFactory}
 import scalax.collection.immutable
 import scalax.collection.immutable.Graph
+import v2.GlobalAuxiliaries.SignalShotRNG.{ERLANG, PLAIN}
 import v2.SystemModel.SystemModelProps
 
 import java.util.concurrent.atomic.AtomicInteger
@@ -24,6 +25,10 @@ object GlobalAuxiliaries:
   def generateId():Int = 
     Await.result(currentId.future, Duration.Inf).incrementAndGet()
 
+  enum SignalShotRNG{
+    case PLAIN
+    case ERLANG
+  }
   /** @param signals
     *   number of signals
     * @param videoshots
@@ -44,7 +49,8 @@ object GlobalAuxiliaries:
       workstations: Int,
       signal2Shots: Int,
       shot2Workstations: Int,
-      displayLimits: (Int, Int)
+      displayLimits: (Int, Int),
+      signalsShotSampleGenerationType: SignalShotRNG = SignalShotRNG.PLAIN
   ): SystemModel =
 
     // Nodes
@@ -60,11 +66,22 @@ object GlobalAuxiliaries:
 
     // Edges
     // Создаваемые рёбра имеют вес 1. Это потребуется позже для алгоритма поиска максимального потока.
-    val svEdges = for {
-      s <- signalNodes
-      v <- pick(signal2Shots, videoNodes.length).map(videoNodes)
-    } yield s ~> v % 1
-
+    val svEdges = {
+      signalsShotSampleGenerationType match
+        case PLAIN => for {
+            s <- signalNodes
+            v <- pick(signal2Shots, videoNodes.length).map(videoNodes)
+          } yield s ~> v % 1
+        case ERLANG => 
+          val k = 1
+          val lambda = k/(signal2Shots + 0.5)
+          val erlangSample = ErlangGen.ErlangGenerator.erlang(k, lambda)
+          for {
+            s <- signalNodes
+            v <- pick(erlangSample, videoNodes.length).map(videoNodes)
+          } yield s ~> v % 1
+        
+    }
     val vwEdges = for {
       v <- videoNodes
       w <- pick(shot2Workstations, workstationNodes.length).map(
@@ -88,8 +105,8 @@ object GlobalAuxiliaries:
     )
 
   def generateSystemModel(props: SystemModelProps): SystemModel =
-    val SystemModelProps(signals, videoshots, workstations, signal2Shots, shot2Workstations, displayLimits) = props
-    generateSystemModel(signals, videoshots, workstations, signal2Shots, shot2Workstations, displayLimits)
+    val SystemModelProps(signals, videoshots, workstations, signal2Shots, shot2Workstations, displayLimits, s2sDistributionType) = props
+    generateSystemModel(signals, videoshots, workstations, signal2Shots, shot2Workstations, displayLimits, s2sDistributionType)
 
   def printCollection[X](title: String, coll: Iterable[X]): String =
     s"$title:\n\t${coll.mkString("\n\t")}\n"

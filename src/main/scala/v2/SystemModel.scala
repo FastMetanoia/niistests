@@ -4,7 +4,8 @@ package v2
 import scalax.collection.edges.labeled.WDiEdge
 import scalax.collection.immutable
 import scalax.collection.immutable.Graph
-import v2.GlobalAuxiliaries.* 
+import v2.GlobalAuxiliaries.*
+import v2.GlobalAuxiliaries.SignalShotRNG.PLAIN 
 
 /** Класс для представления тестируемой системы.
   *
@@ -40,6 +41,8 @@ object SystemModel{
                               workstations: Int,
                               signal2Shots: Int,
                               shot2Workstations: Int,
-                              displayLimits: (Int, Int))
+                              displayLimits: (Int, Int),
+                              s2sDistributionType:SignalShotRNG = PLAIN
+                             )
   val defProps: SystemModelProps = SystemModelProps(0,0,0,0,0,(0,0))
 }

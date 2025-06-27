@@ -28,7 +28,7 @@ object TestProvider:
     given ExecutionContext = ExecutionContext.global
 
     val SystemModel(_, _, _, _, _,
-    SystemModel.SystemModelProps(signals, videoshots, workstations, signal2Shots, shot2Workstations, displayLimits)
+    SystemModel.SystemModelProps(signals, videoshots, workstations, signal2Shots, shot2Workstations, displayLimits, s2sDistributionType)
     ) = model
 
     val totalPairs = SequentialTestingSolution.solveProblem(model).size

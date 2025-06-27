@@ -68,7 +68,6 @@ def writeScenario(steps:Seq[ScenarioBlock]):Unit =
   println(steps)
 
 //Шаг 3. Сформировать шаги
-//todo: имитировать СИГНАЛЫ, выкинуть видеокадры.
 def getSteps(vClusters:Seq[VCluster], arms:Set[ARM]):Seq[ScenarioBlock] = {
   vClusters.zipWithIndex.map { case (c, i)=>
     val configuration = VideoshotsConfiguration(
@@ -96,34 +95,34 @@ def algLoop(k:Int, arms:Set[ARM], signalShotMapping: SignalShotMapping, clusters
       clustersTested.appendedAll(getClustersOfSize(k, arms, signalShotMapping, clustersTested))
     )
 
-enum ClusterRelation{
-  case CONTAINS
-  case PARTICIPATES
-  case NONE
-}
+//enum ClusterRelation{
+//  case CONTAINS
+//  case PARTICIPATES
+//  case NONE
+//}
+//
+//def calculateRelation(c1:VCluster, c2:VCluster):ClusterRelation =
+//  import ClusterRelation.*
+//  if (c1.vs.subsetOf(c2.vs)) PARTICIPATES
+//  else if (c1.vs.subsetOf(c2.vs)) CONTAINS
+//  else NONE
 
-def calculateRelation(c1:VCluster, c2:VCluster):ClusterRelation =
-  import ClusterRelation.*
-  if (c1.vs.subsetOf(c2.vs)) PARTICIPATES
-  else if (c1.vs.subsetOf(c2.vs)) CONTAINS
-  else NONE
 
 
-
-def reorganizeVClusters(clusters:Seq[VCluster]):Seq[VCluster] = {
-  case class Pack(cluster:VCluster, subClusters:Seq[VCluster])
-
-  def findPack(cluster:VCluster, clusters: Seq[VCluster], known:Seq[VCluster] = Seq.empty): Pack =
-    import ClusterRelation.*
-    clusters.foldLeft(Pack(cluster, known)) { case (Pack(cluster, subClusters), c) =>
-      calculateRelation(cluster, c) match
-        case ClusterRelation.CONTAINS => Pack(cluster, subClusters.appended(c))
-        case ClusterRelation.PARTICIPATES => return findPack(c, clusters.filterNot(_ == c), known)
-        case ClusterRelation.NONE => Pack(cluster, subClusters)
-    }
-
-  ???
-}
+//def reorganizeVClusters(clusters:Seq[VCluster]):Seq[VCluster] = {
+//  case class Pack(cluster:VCluster, subClusters:Seq[VCluster])
+//
+//  def findPack(cluster:VCluster, clusters: Seq[VCluster], known:Seq[VCluster] = Seq.empty): Pack =
+//    import ClusterRelation.*
+//    clusters.foldLeft(Pack(cluster, known)) { case (Pack(cluster, subClusters), c) =>
+//      calculateRelation(cluster, c) match
+//        case ClusterRelation.CONTAINS => Pack(cluster, subClusters.appended(c))
+//        case ClusterRelation.PARTICIPATES => return findPack(c, clusters.filterNot(_ == c), known)
+//        case ClusterRelation.NONE => Pack(cluster, subClusters)
+//    }
+//
+//  ???
+//}
 
 
 
