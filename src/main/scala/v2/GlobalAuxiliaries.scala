@@ -74,14 +74,14 @@ object GlobalAuxiliaries:
           } yield s ~> v % 1
         case ERLANG => 
           val k = 1
-          val lambda = k/(signal2Shots + 0.5)
-          val erlangSample = ErlangGen.ErlangGenerator.erlang(k, lambda)
+          val lambda = k/(signal2Shots - 0.5)
           for {
             s <- signalNodes
+            erlangSample = ErlangGen.ErlangGenerator.erlang(k, lambda)
             v <- pick(erlangSample, videoNodes.length).map(videoNodes)
           } yield s ~> v % 1
-        
     }
+
     val vwEdges = for {
       v <- videoNodes
       w <- pick(shot2Workstations, workstationNodes.length).map(

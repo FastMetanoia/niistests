@@ -4,7 +4,7 @@ package v2
 import scala.concurrent.{Await, ExecutionContext, Future}
 import scala.concurrent.duration.Duration
 
-// Абстрактный класс для решения проблемы.
+// Абстрактный класс для решения декомпозируемой задачи
 abstract class ProblemSolution[
     DomainSystemModel,
     DomainProblemPart,

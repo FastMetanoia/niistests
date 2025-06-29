@@ -19,29 +19,40 @@ object GreedyParallelTestingSolution extends ProblemSolution[
 
   override def calculateModel(calculationInput: (Int, Iterable[Int], SystemModel)): Iterable[(Int, Set[(Int, Seq[Int])])] =
     val (sig, vs, model) = calculationInput
+
+    val mutableWorkstationDisplays:mutable.Map[Int, Int] = mutable.Map.from(model.workstationDisplays)
+
     val availableVs = mutable.Set.from(vs)
     val wNodes = vs.flatMap(v => (model.graph get v).diSuccessors).toSet
-    val wsMap = for {
-      wNode <- wNodes
+    val wvsMap = for {
+      wNode <- wNodes.filter(n=>mutableWorkstationDisplays(n.outer) > 0)
       effectiveVs = availableVs.intersect(wNode.diPredecessors.map(_.outer))
       w = wNode.outer
-      displaysN = model.workstationDisplays(w)
+      displaysN = mutableWorkstationDisplays(w)
       vs = effectiveVs.take(displaysN).toSeq
     } yield {
       vs.foreach(availableVs.remove)
+      mutableWorkstationDisplays(w) -= vs.size
       (w, vs)
     }
     if(availableVs.isEmpty)
-      Seq((sig, wsMap))
+      Seq((sig, wvsMap))
     else
-      Seq((sig, wsMap)).appendedAll(calculateModel((sig, availableVs, model)))
+      Seq((sig, wvsMap)).appendedAll(calculateModel((sig, availableVs, model)))
+
+
 
   override def interpretModel(calculationResult: Iterable[(Int, Set[(Int, Seq[Int])])]): Iterable[Action] =
     for {
-      (sig, wsMap) <- calculationResult
-      (w, vs) <- wsMap
-      vwMap = vs.map(v=>v->w)
-    } yield Action(Set(sig), vwMap.toMap)
+      (sig, wvsMap) <- calculationResult
+    } yield {
+      val vwMap = wvsMap.flatMap {(w, vs)=> vs.map(v=> v->w)}
+      //vwMap = vs.map(v => v -> w)
+      Action(Set(sig), vwMap.toMap)
+    }
 
-  override def aggregateResults(domainResults: Iterable[Iterable[Action]]): Iterable[Action] = domainResults.flatten
+  override def aggregateResults(domainResults: Iterable[Iterable[Action]]): Iterable[Action] =
+    val result = domainResults.flatten
+    println(result.mkString("\n"))
+    result
 }

@@ -87,6 +87,7 @@ object CliqueParallelTestingSolution extends ProblemSolution[
     // number of connections for each signal
     val signalsSaturation =
       signals.map(s => s -> (graph get s).diSuccessors.size).toMap
+    print("`"*signalsSaturation.keys.size)
 
     def go(
             signals: Seq[Int],

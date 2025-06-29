@@ -12,3 +12,13 @@ package v2
   samples.take(10).tapEach(println)
   val mean = (samples.sum.toDouble / samples.size)
   println(mean)
+
+@main def testTo() =
+  println((1 to 3).toVector)
+
+@main def testSmth() =
+  val k = 1
+  val lambda = k / (3 + 0.5)
+  val n = 90000
+  val erlangSample = for(_<-1 to n) yield ErlangGen.ErlangGenerator.erlang(k, lambda)
+  println((erlangSample.sum+.0) / n)

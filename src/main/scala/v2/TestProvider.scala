@@ -24,7 +24,7 @@ object TestProvider:
   def testAndReport(
                      model: SystemModel,
                      problemSolutions: Iterable[ProblemSolution[SystemModel, ?, ?, ?, ?, Iterable[Action]]]
-                   ): LazyList[String] =
+                   ): LazyList[String] = {
     given ExecutionContext = ExecutionContext.global
 
     val SystemModel(_, _, _, _, _,
@@ -33,8 +33,8 @@ object TestProvider:
 
     val totalPairs = SequentialTestingSolution.solveProblem(model).size
     val displaysTotal = model.workstationDisplays.values.sum
-    val results = for {
-      problemSolution <- problemSolutions
+    for {
+      problemSolution <- LazyList.from(problemSolutions)
       ts0 = System.currentTimeMillis()
       resultTestingScenario = problemSolution.solveProblemParallel(model)
       ts1 = System.currentTimeMillis()
@@ -46,8 +46,8 @@ object TestProvider:
       rMetric = (totalPairs + .0) / steps
       rRelation = rMetric / displaysTotal
     } yield s"${problemSolution.name}, $signals,$videoshots,$workstations,$signal2Shots,$shot2Workstations,$displaysMinimum,$displaysMaximum,$displaysTotal,$runDuration,$steps,$totalPairs,$rMetric,$rRelation"
+  }
 
-    LazyList.from(results)
 
   def testAndWrite(
                     data:LazyList[SystemModel],

@@ -63,11 +63,21 @@ object ParallelSolutionAuxiliaries:
   )
 
   // saturation check
+  def saturationCount(signals: Seq[Int], flowGraph: Graph[Int, WDiEdge[Int]]):(Int,Int) =
+    val outgoingMap = signals.flatMap { sid=>
+      flowGraph.get(sid).outgoing
+    }.groupBy(_.weight)
+    (outgoingMap(0d).size, outgoingMap(1d).size)
+
+
   def isSaturated(
                    flowGraph: Graph[Int, WDiEdge[Int]],
                    signals: Seq[Int],
                    saturationMapping: Map[Int, Int]
   ): Boolean =
+    return signals.forall{ sid =>
+      flowGraph.get(sid).outgoing.forall(_.weight == 1d)
+    }
     signals.forall { signalId =>
       val saturatedEdges = (flowGraph get signalId).edges
         .map(_.outer)

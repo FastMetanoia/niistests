@@ -92,7 +92,7 @@ val algorithms = Seq(
     signals = 1000,
     videoshots = 100,
     workstations = 10,
-    signal2Shots = 12,
+    signal2Shots = 4,
     shot2Workstations = 2,
     displayLimits = (2, 5)
   )
@@ -177,7 +177,7 @@ def realNiiis() = {
     workstations = 7,
     signal2Shots = 3,
     shot2Workstations = 2,
-    displayLimits = (2, 16),
+    displayLimits = (2, 17),
     ERLANG
   )
 
@@ -185,7 +185,7 @@ def realNiiis() = {
     startState,
     identity
   )
-  TestProvider.testAndWrite(data.take(100),Seq(SequentialTestingSolution, FlowParallelTestingSolution),"RealNiiis")
+  TestProvider.testAndWrite(data.take(1), Seq(CliqueParallelTestingSolution),"RealNiiis")
 }
 
 def signalsAndShotsGrowth() = {
@@ -194,7 +194,7 @@ def signalsAndShotsGrowth() = {
     signals = 1000,
     videoshots = 100,
     workstations = 10,
-    signal2Shots = 12,
+    signal2Shots = 4,
     shot2Workstations = 2,
     displayLimits = (2, 5)
   )
@@ -243,5 +243,39 @@ def signalsShotsWorkstationsGrowth() = {
 
 @main def knowPerc() =
   println((os.read(os.pwd / "output" / "length.txt").chars().count() + 0.0) / 90000)
+
+@main def testErlangGeneration() =
+  initializeIdGeneratorIfNot()
+  val startState = SystemModel.SystemModelProps(
+    signals = 90000,
+    videoshots = 870,
+    workstations = 7,
+    signal2Shots = 3,
+    shot2Workstations = 2,
+    displayLimits = (2, 17),
+    ERLANG
+  )
+
+  val data = makeDataGenerator(
+    startState,
+    identity
+  )
+
+  val props = data.map(sm=> sm.signals.map(s=> sm.graph.get(s).outgoing.size).sum.toDouble / sm.signals.size)
+  println(props.take(10).toVector)
+
+@main def testSave() =
+  initializeIdGeneratorIfNot()
+  val sm = generateSystemModel(
+    signals = 90000,
+    videoshots = 870,
+    workstations = 7,
+    signal2Shots = 3,
+    shot2Workstations = 2,
+    displayLimits = (2, 17),
+    ERLANG
+  )
+  writeSystemToFiles(sm, "SomeSystem", os.pwd / "output")
+
 
 
