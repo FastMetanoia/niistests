@@ -247,8 +247,8 @@ def signalsShotsWorkstationsGrowth() = {
 @main def testErlangGeneration() =
   initializeIdGeneratorIfNot()
   val startState = SystemModel.SystemModelProps(
-    signals = 90000,
-    videoshots = 870,
+    signals = 300000,
+    videoshots = 1000,
     workstations = 7,
     signal2Shots = 3,
     shot2Workstations = 2,
@@ -263,6 +263,7 @@ def signalsShotsWorkstationsGrowth() = {
 
   val props = data.map(sm=> sm.signals.map(s=> sm.graph.get(s).outgoing.size).sum.toDouble / sm.signals.size)
   println(props.take(10).toVector)
+  println("avg = " + props.sum / props.size)
 
 @main def testSave() =
   initializeIdGeneratorIfNot()
